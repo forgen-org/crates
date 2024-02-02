@@ -1,0 +1,19 @@
+[package]
+name = "auth"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+framework = { path = "../framework" }
+hmac = "0.12.1"
+jwt = "0.16.0"
+regex = "1.10.3"
+serde = "1.0.196"
+sha2 = "0.10.8"
+uuid = { version = "1.7.0", features = ["serde", "v4"] }
+validator = { version = "0.16.1", features = ["derive"] }
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full"] }
