@@ -8,7 +8,7 @@ use framework::*;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct Register(RegisterMethod);
+pub struct Register(pub RegisterMethod);
 
 #[async_trait]
 impl<R> Command<R, RegisterError> for Register
@@ -51,12 +51,12 @@ pub enum RegisterError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{application::auth_runtime::AuthRuntime, domain::auth_scalar::Password};
+    use crate::{application::test_runtime::TestRuntime, domain::auth_scalar::Password};
 
     #[tokio::test]
     async fn test_register_user_already_exists() {
         let runtime =
-            AuthRuntime::default().existing_email(Email::parse("existing@example.com").unwrap());
+            TestRuntime::default().existing_email(Email::parse("existing@example.com").unwrap());
 
         let command = Register(RegisterMethod::EmailPassword(
             Email::parse("existing@example.com").unwrap(),

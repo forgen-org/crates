@@ -5,4 +5,4 @@ pub mod auth_projection;
 pub mod auth_query;
 
 #[cfg(test)]
-pub mod auth_runtime;
+pub mod test_runtime;

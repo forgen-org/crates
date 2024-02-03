@@ -2,19 +2,19 @@ use crate::{application::auth_port::*, domain::auth_scalar::Password};
 use framework::*;
 
 #[derive(Default)]
-pub struct AuthRuntime {
+pub struct TestRuntime {
     existing_email: Option<Email>,
 }
 
-impl AuthRuntime {
-    pub fn existing_email(mut self, existing_email: Email) -> AuthRuntime {
+impl TestRuntime {
+    pub fn existing_email(mut self, existing_email: Email) -> TestRuntime {
         self.existing_email = Some(existing_email);
         self
     }
 }
 
 #[async_trait]
-impl AuthStore for AuthRuntime {
+impl AuthStore for TestRuntime {
     async fn pull(&self, _user_id: &UserId) -> Result<Vec<AuthEvent>, AuthStoreError> {
         Ok(vec![])
     }
@@ -25,7 +25,7 @@ impl AuthStore for AuthRuntime {
 }
 
 #[async_trait]
-impl UserRepository for AuthRuntime {
+impl UserRepository for TestRuntime {
     async fn count_by_email(&self, email: &Email) -> Result<usize, UserRepositoryError> {
         if let Some(existing_email) = self.existing_email.as_ref() {
             if email.as_str() == existing_email.as_str() {
@@ -54,4 +54,4 @@ impl UserRepository for AuthRuntime {
 }
 
 #[async_trait]
-impl Runtime for AuthRuntime {}
+impl Runtime for TestRuntime {}
