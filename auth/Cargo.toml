@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+axum = { version = "0.7.4", optional = true }
 framework = { path = "../framework" }
 hmac = "0.12.1"
 jwt = "0.16.0"
@@ -17,3 +18,7 @@ validator = { version = "0.16.1", features = ["derive"] }
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full"] }
+
+[features]
+default = ["axum"]
+axum = ["dep:axum"]

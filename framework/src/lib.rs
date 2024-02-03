@@ -20,7 +20,7 @@ pub trait Snapshot: Projection {
     fn restore(&self) -> Result<Vec<Self::Event>, Self::Error>;
 }
 
-pub trait Projection: Serialize + for<'de> serde::Deserialize<'de> {
+pub trait Projection: Default + Serialize + for<'de> serde::Deserialize<'de> {
     type Event: Event;
     fn apply(&mut self, events: &[Self::Event]);
 }

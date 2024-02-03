@@ -18,11 +18,12 @@ pub enum AuthStoreError {}
 #[delegate]
 pub trait UserRepository {
     async fn count_by_email(&self, email: &Email) -> Result<usize, UserRepositoryError>;
+    async fn find_one(&self, user_id: &UserId) -> Result<User, UserRepositoryError>;
     async fn find_one_by_credentials(
         &self,
         credentials: &Credentials,
     ) -> Result<User, UserRepositoryError>;
-    async fn save(&self, projection: &User) -> Result<(), ()>;
+    async fn save(&self, user_id: &UserId, projection: &User) -> Result<(), UserRepositoryError>;
 }
 
 #[derive(Debug, Error)]

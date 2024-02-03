@@ -10,10 +10,10 @@
 // where
 //     R: Runtime + UserRepository,
 // {
-//     async fn execute(self, r: &R) -> Result<User, LogInError> {
+//     async fn execute(self, runtime: &R) -> Result<User, LogInError> {
 //         let credentials = self.0;
 //         let user =
-//             UserRepository::find_one(r, UserRepositoryFilter::ByCredentials(credentials)).await?;
+//             UserRepository::find_one(runtime, UserRepositoryFilter::ByCredentials(credentials)).await?;
 //         Ok(user)
 //     }
 // }

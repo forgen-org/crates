@@ -1,11 +1,15 @@
 use framework::Projection;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{auth_event::AuthEvent, auth_scalar::UserId};
+use crate::domain::{
+    auth_event::AuthEvent,
+    auth_scalar::{PasswordHash, UserId},
+};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct User {
-    pub id: UserId,
+    #[serde(skip_serializing)]
+    pub password_hash: Option<PasswordHash>,
 }
 
 impl Projection for User {

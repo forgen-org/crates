@@ -3,11 +3,13 @@ use crate::domain::{
     auth_scalar::{Email, Password},
 };
 use framework::*;
+use serde::Deserialize;
 
 pub enum AuthMessage {
     Register(RegisterMethod),
 }
 
+#[derive(Deserialize)]
 pub enum RegisterMethod {
     EmailPassword(Email, Password),
 }
