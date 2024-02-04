@@ -37,7 +37,7 @@ impl UserRepository for TestRuntime {
 
     async fn find_one(&self, _user_id: &UserId) -> Result<User, UserRepositoryError> {
         Ok(User {
-            password_hash: Some(Password("password_hash".to_string()).into()),
+            password_hash: Some(Password::parse("password_hash").unwrap().into()),
         })
     }
 

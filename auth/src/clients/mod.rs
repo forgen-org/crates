@@ -1,2 +1,2 @@
 #[cfg(feature = "axum")]
-mod axum;
+pub mod axum;

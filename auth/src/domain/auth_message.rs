@@ -53,12 +53,14 @@ mod tests {
 
     #[test]
     fn test_already_registered() {
-        let email = Email::parse("email@example.com").unwrap();
-        let credentials = RegisterMethod::EmailPassword(email, Password("password".to_string()));
+        let credentials = RegisterMethod::EmailPassword(
+            Email::parse("email@example.com").unwrap(),
+            Password::parse("password").unwrap(),
+        );
 
         let events = vec![AuthEvent::Registered(Credentials::EmailPassword(
             Email::parse("email@example.com").unwrap(),
-            Password("12345".to_string()).into(),
+            Password::parse("12345").unwrap().into(),
         ))];
         let res = AuthMessage::Register(credentials).send(&events);
 

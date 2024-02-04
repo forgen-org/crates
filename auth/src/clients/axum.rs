@@ -1,7 +1,5 @@
 use crate::application::auth_command::{Register, RegisterError};
 use crate::application::auth_port::*;
-use crate::domain::auth_message::RegisterMethod;
-use crate::domain::auth_scalar::Password;
 use axum::{
     extract::State,
     http::StatusCode,
@@ -10,7 +8,6 @@ use axum::{
     Json, Router,
 };
 use framework::*;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 pub fn auth_routes<R>(runtime: R) -> Router
@@ -25,30 +22,14 @@ where
 
 async fn register<R>(
     State(runtime): State<Arc<R>>,
-    Json(dto): Json<RegisterDto>,
+    Json(register): Json<Register>,
 ) -> Result<(), RegisterError>
 where
     R: Runtime + AuthStore + UserRepository,
 {
-    let register: Register = dto.try_into().unwrap();
+    // let register: Register = dto.try_into().unwrap();
     register.execute(runtime.as_ref()).await?;
     Ok(())
-}
-
-#[derive(Serialize, Deserialize)]
-struct RegisterDto {
-    email: String,
-    password: String,
-}
-
-impl TryFrom<RegisterDto> for Register {
-    type Error = ();
-    fn try_from(dto: RegisterDto) -> Result<Self, Self::Error> {
-        Ok(Register(RegisterMethod::EmailPassword(
-            Email::parse(&dto.email).unwrap(),
-            Password(dto.password),
-        )))
-    }
 }
 
 impl IntoResponse for RegisterError {
@@ -60,20 +41,10 @@ impl IntoResponse for RegisterError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        application::test_runtime::TestRuntime,
-        domain::{auth_message::RegisterMethod, auth_scalar::Password},
-    };
-    use axum::{
-        body::Body,
-        http::{self, Request, StatusCode},
-    };
+    use crate::application::test_runtime::TestRuntime;
+    use axum::http::StatusCode;
     use axum_test::TestServer;
-    use serde_json::{json, Value};
-    use std::{
-        collections::HashMap,
-        net::{SocketAddr, TcpListener},
-    };
+    use serde_json::json;
 
     #[tokio::test]
     async fn the_real_deal() {
