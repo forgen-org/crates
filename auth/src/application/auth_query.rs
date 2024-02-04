@@ -1,25 +1,30 @@
-// use crate::application::auth_port::*;
-// use crate::application::auth_projection::User;
-// use crate::domain::auth_scalar::Credentials;
-// use framework::*;
+use crate::application::auth_port::*;
+use crate::domain::auth_scalar::EmailError;
+use framework::*;
 
-// pub struct LogIn(Credentials);
+pub struct GetJwtByEmail {
+    pub email: String,
+}
 
-// #[async_trait]
-// impl<R> Query<R, User, LogInError> for LogIn
-// where
-//     R: Runtime + UserRepository,
-// {
-//     async fn execute(self, runtime: &R) -> Result<User, LogInError> {
-//         let credentials = self.0;
-//         let user =
-//             UserRepository::find_one(runtime, UserRepositoryFilter::ByCredentials(credentials)).await?;
-//         Ok(user)
-//     }
-// }
+#[async_trait]
+impl<R> Query<R, Jwt, GetJwtByEmailError> for GetJwtByEmail
+where
+    R: Runtime + JwtPort + UserRepository,
+{
+    async fn execute(&self, runtime: &R) -> Result<Jwt, GetJwtByEmailError> {
+        let email = Email::parse(&self.email)?;
+        let user = UserRepository::find_by_email(runtime, &email).await?;
+        let jwt = JwtPort::sign(runtime, &user).await?;
+        Ok(jwt)
+    }
+}
 
-// #[derive(Debug, Error)]
-// pub enum LogInError {
-//     #[error(transparent)]
-//     UserRepositoryError(#[from] UserRepositoryError),
-// }
+#[derive(Debug, Error)]
+pub enum GetJwtByEmailError {
+    #[error(transparent)]
+    EmailError(#[from] EmailError),
+    #[error(transparent)]
+    JwtPortError(#[from] JwtPortError),
+    #[error(transparent)]
+    UserRepositoryError(#[from] UserRepositoryError),
+}

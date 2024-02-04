@@ -12,7 +12,7 @@ pub trait Message<T, E>
 where
     T: Event,
 {
-    fn send(self, events: &[T]) -> Result<Vec<T>, E>;
+    fn send(&self, events: &[T]) -> Result<Vec<T>, E>;
 }
 
 pub trait Snapshot: Projection {
@@ -32,7 +32,7 @@ pub trait Command<R, E>
 where
     R: Runtime,
 {
-    async fn execute(self, runtime: &R) -> Result<(), E>;
+    async fn execute(&self, runtime: &R) -> Result<(), E>;
 }
 
 #[async_trait]
@@ -40,5 +40,5 @@ pub trait Query<R, T, E>
 where
     R: Runtime,
 {
-    async fn execute(self, runtime: &R) -> Result<T, E>;
+    async fn execute(&self, runtime: &R) -> Result<T, E>;
 }

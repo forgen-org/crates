@@ -1,52 +1,69 @@
-use crate::application::auth_listener::{AuthListener, AuthListenerError};
 use crate::application::auth_port::*;
+use crate::domain::auth_message::AuthError;
+use crate::domain::auth_message::{AuthMessage, RegisterMethod};
 use crate::domain::auth_scalar::{EmailError, Password, PasswordError};
-use crate::domain::{
-    auth_message::{AuthMessage, RegisterMethod},
-    auth_scalar::UserId,
-};
+use crate::domain::auth_state::AuthState;
 use framework::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-pub struct Register {
-    email: String,
-    password: String,
+pub struct RegisterCommand {
+    pub email: String,
+    pub password: String,
 }
 
 #[async_trait]
-impl<R> Command<R, RegisterError> for Register
+impl<R> Command<R, AuthCommandError> for RegisterCommand
 where
     R: Runtime + AuthStore + UserRepository,
 {
-    async fn execute(self, runtime: &R) -> Result<(), RegisterError> {
-        let email = Email::parse(self.email)?;
-
-        // Check if email already exists
-        let existing_users = UserRepository::count_by_email(runtime, &email).await?;
-        if existing_users != 0 {
-            return Err(RegisterError::UserAlreadyExists);
-        }
-
-        let register_method = RegisterMethod::EmailPassword(email, Password::parse(self.password)?);
-        AuthListener {
-            user_id: UserId::default(),
-            message: AuthMessage::Register(register_method),
-        }
-        .execute(runtime)
+    async fn execute(&self, runtime: &R) -> Result<(), AuthCommandError> {
+        let email = Email::parse(&self.email)?;
+        dispatch(
+            runtime,
+            &AuthStore::pull_by_email(runtime, &email).await?,
+            &AuthMessage::Register(RegisterMethod::EmailPassword(
+                email,
+                Password::parse(&self.password)?,
+            )),
+        )
         .await?;
+        Ok(())
+    }
+}
 
+#[derive(Serialize, Deserialize)]
+pub struct LoginCommand {
+    pub email: String,
+    pub password: String,
+}
+
+#[async_trait]
+impl<R> Command<R, AuthCommandError> for LoginCommand
+where
+    R: Runtime + AuthStore + UserRepository,
+{
+    async fn execute(&self, runtime: &R) -> Result<(), AuthCommandError> {
+        let email = Email::parse(&self.email)?;
+        dispatch(
+            runtime,
+            &AuthStore::pull_by_email(runtime, &email).await?,
+            &AuthMessage::LogIn(RegisterMethod::EmailPassword(
+                email,
+                Password::parse(&self.password)?,
+            )),
+        )
+        .await?;
         Ok(())
     }
 }
 
 #[derive(Debug, Error)]
-pub enum RegisterError {
-    #[error("User already exists")]
-    UserAlreadyExists,
-
+pub enum AuthCommandError {
     #[error(transparent)]
-    AuthListenerError(#[from] AuthListenerError),
+    AuthError(#[from] AuthError),
+    #[error(transparent)]
+    AuthStoreError(#[from] AuthStoreError),
     #[error(transparent)]
     EmailError(#[from] EmailError),
     #[error(transparent)]
@@ -55,29 +72,27 @@ pub enum RegisterError {
     UserRepositoryError(#[from] UserRepositoryError),
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::application::test_runtime::TestRuntime;
+async fn dispatch<R>(
+    runtime: &R,
+    existing_events: &[AuthEvent],
+    message: &AuthMessage,
+) -> Result<(), AuthCommandError>
+where
+    R: Runtime + AuthStore + UserRepository,
+{
+    let new_events = message.send(existing_events)?;
 
-    #[tokio::test]
-    async fn test_register_user_already_exists() {
-        let runtime =
-            TestRuntime::default().existing_email(Email::parse("existing@example.com").unwrap());
+    // Push new events
+    AuthStore::push(runtime, &new_events).await?;
 
-        let command = Register {
-            email: "existing@example.com".to_string(),
-            password: "password".to_string(),
-        };
-        assert!(matches!(
-            command.execute(&runtime).await,
-            Err(RegisterError::UserAlreadyExists)
-        ));
+    let state = AuthState(&new_events);
 
-        let command = Register {
-            email: "nonexisting@example.com".to_string(),
-            password: "password".to_string(),
-        };
-        assert!(matches!(command.execute(&runtime).await, Ok(())));
+    if let Some(user_id) = state.user_id() {
+        // Recompute projections
+        let mut projection = UserRepository::find_by_user_id(runtime, user_id).await?;
+        projection.apply(&new_events);
+        UserRepository::save(runtime, &projection).await?;
     }
+
+    Ok(())
 }

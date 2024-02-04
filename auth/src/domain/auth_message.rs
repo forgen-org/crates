@@ -5,8 +5,11 @@ use crate::domain::{
 use framework::*;
 use serde::Deserialize;
 
+use super::{auth_scalar::UserId, auth_state::AuthState};
+
 pub enum AuthMessage {
     Register(RegisterMethod),
+    LogIn(RegisterMethod),
 }
 
 #[derive(Deserialize)]
@@ -24,25 +27,34 @@ impl From<RegisterMethod> for Credentials {
     }
 }
 
+impl From<&RegisterMethod> for Credentials {
+    fn from(method: &RegisterMethod) -> Self {
+        method.to_owned().into()
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum AuthError {
     #[error("Already registered")]
     AlreadyRegistered,
+
+    #[error("Invalid password")]
+    InvalidPassword,
 }
 
 impl Message<AuthEvent, AuthError> for AuthMessage {
-    fn send(self, events: &[AuthEvent]) -> Result<Vec<AuthEvent>, AuthError> {
+    fn send(&self, events: &[AuthEvent]) -> Result<Vec<AuthEvent>, AuthError> {
+        let state = AuthState(events);
         match self {
             AuthMessage::Register(credentials) => {
-                if events
-                    .iter()
-                    .any(|event| matches!(event, AuthEvent::Registered(_)))
-                {
+                if state.is_registered() {
                     Err(AuthError::AlreadyRegistered)
                 } else {
-                    Ok(vec![AuthEvent::Registered(credentials.into())])
+                    let user_id = UserId::default();
+                    Ok(vec![AuthEvent::Registered(user_id, credentials.into())])
                 }
             }
+            AuthMessage::LogIn(_) => unimplemented!(),
         }
     }
 }
@@ -58,10 +70,13 @@ mod tests {
             Password::parse("password").unwrap(),
         );
 
-        let events = vec![AuthEvent::Registered(Credentials::EmailPassword(
-            Email::parse("email@example.com").unwrap(),
-            Password::parse("12345").unwrap().into(),
-        ))];
+        let events = vec![AuthEvent::Registered(
+            UserId::default(),
+            Credentials::EmailPassword(
+                Email::parse("email@example.com").unwrap(),
+                Password::parse("12345678").unwrap().into(),
+            ),
+        )];
         let res = AuthMessage::Register(credentials).send(&events);
 
         assert!(matches!(res, Err(AuthError::AlreadyRegistered)));

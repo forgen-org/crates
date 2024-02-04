@@ -1,5 +1,6 @@
-use crate::application::auth_command::{Register, RegisterError};
+use crate::application::auth_command::{AuthCommandError, LoginCommand, RegisterCommand};
 use crate::application::auth_port::*;
+use crate::application::auth_query::{GetJwtByEmail, GetJwtByEmailError};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -12,29 +13,69 @@ use std::sync::Arc;
 
 pub fn auth_routes<R>(runtime: R) -> Router
 where
-    R: Runtime + AuthStore + UserRepository + 'static,
+    R: Runtime + AuthStore + JwtPort + UserRepository + 'static,
 {
     // let runtime = "test";
     Router::new()
+        .route("/login", post(login))
         .route("/register", post(register))
         .with_state(Arc::new(runtime))
 }
 
-async fn register<R>(
+async fn login<R>(
     State(runtime): State<Arc<R>>,
-    Json(register): Json<Register>,
-) -> Result<(), RegisterError>
+    Json(command): Json<LoginCommand>,
+) -> Result<Json<Jwt>, ApiError>
 where
-    R: Runtime + AuthStore + UserRepository,
+    R: Runtime + AuthStore + JwtPort + UserRepository,
 {
-    // let register: Register = dto.try_into().unwrap();
-    register.execute(runtime.as_ref()).await?;
-    Ok(())
+    command.execute(runtime.as_ref()).await?;
+
+    let jwt = GetJwtByEmail {
+        email: command.email,
+    }
+    .execute(runtime.as_ref())
+    .await?;
+
+    Ok(Json(jwt))
 }
 
-impl IntoResponse for RegisterError {
+async fn register<R>(
+    State(runtime): State<Arc<R>>,
+    Json(command): Json<RegisterCommand>,
+) -> Result<Json<Jwt>, ApiError>
+where
+    R: Runtime + AuthStore + JwtPort + UserRepository,
+{
+    command.execute(runtime.as_ref()).await?;
+
+    let jwt = GetJwtByEmail {
+        email: command.email,
+    }
+    .execute(runtime.as_ref())
+    .await?;
+
+    Ok(Json(jwt))
+}
+
+#[derive(Debug, Error)]
+enum ApiError {
+    #[error(transparent)]
+    AuthCommandError(#[from] AuthCommandError),
+    #[error(transparent)]
+    GetJwtByEmailError(#[from] GetJwtByEmailError),
+}
+
+impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
-        (StatusCode::BAD_REQUEST, format!("{}", self)).into_response()
+        match self {
+            ApiError::AuthCommandError(err) => {
+                (StatusCode::BAD_REQUEST, format!("{}", err)).into_response()
+            }
+            ApiError::GetJwtByEmailError(err) => {
+                (StatusCode::BAD_REQUEST, format!("{}", err)).into_response()
+            }
+        }
     }
 }
 
@@ -47,7 +88,7 @@ mod tests {
     use serde_json::json;
 
     #[tokio::test]
-    async fn the_real_deal() {
+    async fn test_register() {
         // let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         // let addr = listener.local_addr().unwrap();
         let runtime = TestRuntime::default();

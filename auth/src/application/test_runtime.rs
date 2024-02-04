@@ -1,55 +1,56 @@
-use crate::{application::auth_port::*, domain::auth_scalar::Password};
+use crate::application::auth_port::*;
 use framework::*;
 
 #[derive(Default)]
-pub struct TestRuntime {
-    existing_email: Option<Email>,
-}
-
-impl TestRuntime {
-    pub fn existing_email(mut self, existing_email: Email) -> TestRuntime {
-        self.existing_email = Some(existing_email);
-        self
-    }
-}
+pub struct TestRuntime {}
 
 #[async_trait]
 impl AuthStore for TestRuntime {
-    async fn pull(&self, _user_id: &UserId) -> Result<Vec<AuthEvent>, AuthStoreError> {
+    async fn pull_by_email(&self, _email: &Email) -> Result<Vec<AuthEvent>, AuthStoreError> {
         Ok(vec![])
     }
 
-    async fn push(&self, _user_id: &UserId, _events: &[AuthEvent]) -> Result<(), AuthStoreError> {
+    async fn pull_by_user_id(&self, _user_id: &UserId) -> Result<Vec<AuthEvent>, AuthStoreError> {
+        Ok(vec![])
+    }
+
+    async fn push(&self, _events: &[AuthEvent]) -> Result<(), AuthStoreError> {
         Ok(())
     }
 }
 
 #[async_trait]
 impl UserRepository for TestRuntime {
-    async fn count_by_email(&self, email: &Email) -> Result<usize, UserRepositoryError> {
-        if let Some(existing_email) = self.existing_email.as_ref() {
-            if email.as_str() == existing_email.as_str() {
-                return Ok(1);
-            }
-        }
-        Ok(0)
-    }
-
-    async fn find_one(&self, _user_id: &UserId) -> Result<User, UserRepositoryError> {
+    async fn find_by_email(&self, email: &Email) -> Result<User, UserRepositoryError> {
         Ok(User {
-            password_hash: Some(Password::parse("password_hash").unwrap().into()),
+            email: email.to_string(),
+            user_id: UserId::default().to_string(),
         })
     }
 
-    async fn find_one_by_credentials(
-        &self,
-        _credentials: &Credentials,
-    ) -> Result<User, UserRepositoryError> {
-        unimplemented!()
+    async fn find_by_user_id(&self, user_id: &UserId) -> Result<User, UserRepositoryError> {
+        Ok(User {
+            email: "email@example.com".to_string(),
+            user_id: user_id.to_string(),
+        })
     }
 
-    async fn save(&self, _user_id: &UserId, _projection: &User) -> Result<(), UserRepositoryError> {
+    async fn save(&self, _projection: &User) -> Result<(), UserRepositoryError> {
         Ok(())
+    }
+}
+
+#[async_trait]
+impl JwtPort for TestRuntime {
+    async fn sign(&self, _user: &User) -> Result<Jwt, JwtPortError> {
+        Ok(Jwt("jwt".to_string()))
+    }
+
+    async fn verify(&self, _token: &Jwt) -> Result<User, JwtPortError> {
+        Ok(User {
+            email: "email@example.com".to_string(),
+            user_id: UserId::default().to_string(),
+        })
     }
 }
 

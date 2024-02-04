@@ -12,6 +12,12 @@ impl Default for UserId {
     }
 }
 
+impl ToString for UserId {
+    fn to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Email(String);
 
@@ -30,9 +36,11 @@ impl Email {
         }
         Ok(Email(value))
     }
+}
 
-    pub fn as_str(&self) -> &str {
-        &self.0
+impl ToString for Email {
+    fn to_string(&self) -> String {
+        self.0.to_string()
     }
 }
 
@@ -56,6 +64,10 @@ impl Password {
         }
         Ok(Password(value.to_string()))
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 #[derive(Debug, Error)]
@@ -64,7 +76,7 @@ pub enum PasswordError {
     InvalidLength,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq)]
 pub struct PasswordHash([u8; 32]);
 
 impl From<Password> for PasswordHash {
@@ -74,6 +86,12 @@ impl From<Password> for PasswordHash {
         hasher.update(password.0);
         let value = hasher.finalize();
         Self(value.into())
+    }
+}
+
+impl From<&Password> for PasswordHash {
+    fn from(password: &Password) -> Self {
+        password.to_owned().into()
     }
 }
 
@@ -106,7 +124,7 @@ mod tests {
     fn test_password_hash() {
         let password = Password::parse("password").unwrap();
         assert_eq!(
-            PasswordHash::from(password).0,
+            PasswordHash::from(&password).0,
             [
                 94, 136, 72, 152, 218, 40, 4, 113, 81, 208, 229, 111, 141, 198, 41, 39, 115, 96,
                 61, 13, 106, 171, 189, 214, 42, 17, 239, 114, 29, 21, 66, 216
