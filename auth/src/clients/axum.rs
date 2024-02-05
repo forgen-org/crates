@@ -11,15 +11,19 @@ use axum::{
 use framework::*;
 use std::sync::Arc;
 
-pub fn auth_routes<R>(runtime: R) -> Router
-where
-    R: Runtime + AuthStore + JwtPort + UserRepository + 'static,
-{
-    // let runtime = "test";
-    Router::new()
-        .route("/login", post(login))
-        .route("/register", post(register))
-        .with_state(Arc::new(runtime))
+pub struct AuthRouter;
+
+impl AuthRouter {
+    pub fn new<R>(runtime: R) -> Router
+    where
+        R: Runtime + AuthStore + JwtPort + UserRepository + 'static,
+    {
+        // let runtime = "test";
+        Router::new()
+            .route("/login", post(login))
+            .route("/register", post(register))
+            .with_state(Arc::new(runtime))
+    }
 }
 
 async fn login<R>(
@@ -92,7 +96,7 @@ mod tests {
         // let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         // let addr = listener.local_addr().unwrap();
         let runtime = TestRuntime::default();
-        let app = auth_routes(runtime);
+        let app = AuthRouter::new(runtime);
 
         let server = TestServer::new(app).unwrap();
 
