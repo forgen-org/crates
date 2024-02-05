@@ -3,7 +3,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct UserId(Uuid);
 
 impl Default for UserId {
@@ -18,7 +18,7 @@ impl ToString for UserId {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Email(String);
 
 impl Email {
@@ -81,17 +81,17 @@ pub struct PasswordHash([u8; 32]);
 
 impl From<Password> for PasswordHash {
     fn from(password: Password) -> Self {
-        use sha2::{Digest, Sha256};
-        let mut hasher = Sha256::new();
-        hasher.update(password.0);
-        let value = hasher.finalize();
-        Self(value.into())
+        Self::from(&password)
     }
 }
 
 impl From<&Password> for PasswordHash {
     fn from(password: &Password) -> Self {
-        password.to_owned().into()
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(&password.0);
+        let value = hasher.finalize();
+        Self(value.into())
     }
 }
 

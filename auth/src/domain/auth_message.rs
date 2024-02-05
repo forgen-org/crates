@@ -8,28 +8,23 @@ use serde::Deserialize;
 use super::{auth_scalar::UserId, auth_state::AuthState};
 
 pub enum AuthMessage {
-    Register(RegisterMethod),
-    LogIn(RegisterMethod),
+    Register { method: RegisterMethod },
+    LogIn { method: RegisterMethod },
 }
 
 #[derive(Deserialize)]
 pub enum RegisterMethod {
-    EmailPassword(Email, Password),
-}
-
-impl From<RegisterMethod> for Credentials {
-    fn from(method: RegisterMethod) -> Self {
-        match method {
-            RegisterMethod::EmailPassword(email, password) => {
-                Credentials::EmailPassword(email, password.into())
-            }
-        }
-    }
+    EmailPassword { email: Email, password: Password },
 }
 
 impl From<&RegisterMethod> for Credentials {
     fn from(method: &RegisterMethod) -> Self {
-        method.to_owned().into()
+        match method {
+            RegisterMethod::EmailPassword { email, password } => Credentials::EmailPassword {
+                email: email.clone(),
+                password: password.into(),
+            },
+        }
     }
 }
 
@@ -40,44 +35,71 @@ pub enum AuthError {
 
     #[error("Invalid password")]
     InvalidPassword,
+
+    #[error("Not registered")]
+    NotRegistered,
 }
 
 impl Message<AuthEvent, AuthError> for AuthMessage {
     fn send(&self, events: &[AuthEvent]) -> Result<Vec<AuthEvent>, AuthError> {
         let state = AuthState(events);
         match self {
-            AuthMessage::Register(credentials) => {
+            AuthMessage::Register { method } => {
                 if state.is_registered() {
                     Err(AuthError::AlreadyRegistered)
                 } else {
                     let user_id = UserId::default();
-                    Ok(vec![AuthEvent::Registered(user_id, credentials.into())])
+                    Ok(vec![AuthEvent::Registered {
+                        at: chrono::Utc::now(),
+                        user_id,
+                        credentials: method.into(),
+                    }])
                 }
             }
-            AuthMessage::LogIn(_) => unimplemented!(),
+            AuthMessage::LogIn { method } => {
+                let RegisterMethod::EmailPassword { password, .. } = method;
+
+                if let Some(user_id) = state.user_id() {
+                    if state.verify_password(password) {
+                        Ok(vec![AuthEvent::LoggedIn {
+                            at: chrono::Utc::now(),
+                            user_id: user_id.clone(),
+                        }])
+                    } else {
+                        Err(AuthError::InvalidPassword)
+                    }
+                } else {
+                    Err(AuthError::NotRegistered)
+                }
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use chrono::{TimeZone, Utc};
+
     use super::*;
 
     #[test]
     fn test_already_registered() {
-        let credentials = RegisterMethod::EmailPassword(
-            Email::parse("email@example.com").unwrap(),
-            Password::parse("password").unwrap(),
-        );
+        let events = vec![AuthEvent::Registered {
+            at: Utc.timestamp_opt(0, 0).unwrap(),
+            credentials: Credentials::EmailPassword {
+                email: Email::parse("email@example.com").unwrap(),
+                password: Password::parse("12345678").unwrap().into(),
+            },
+            user_id: UserId::default(),
+        }];
 
-        let events = vec![AuthEvent::Registered(
-            UserId::default(),
-            Credentials::EmailPassword(
-                Email::parse("email@example.com").unwrap(),
-                Password::parse("12345678").unwrap().into(),
-            ),
-        )];
-        let res = AuthMessage::Register(credentials).send(&events);
+        let res = AuthMessage::Register {
+            method: RegisterMethod::EmailPassword {
+                email: Email::parse("email@example.com").unwrap(),
+                password: Password::parse("password").unwrap(),
+            },
+        }
+        .send(&events);
 
         assert!(matches!(res, Err(AuthError::AlreadyRegistered)));
     }

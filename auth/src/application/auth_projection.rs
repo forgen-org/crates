@@ -1,9 +1,7 @@
+use super::auth_port::Credentials;
+use crate::domain::auth_event::AuthEvent;
 use framework::Projection;
 use serde::{Deserialize, Serialize};
-
-use crate::domain::auth_event::AuthEvent;
-
-use super::auth_port::Credentials;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct User {
@@ -16,10 +14,15 @@ impl Projection for User {
 
     fn apply(&mut self, events: &[Self::Event]) {
         for event in events {
-            if let AuthEvent::Registered(user_id, credentials) = event {
+            if let AuthEvent::Registered {
+                user_id,
+                credentials,
+                ..
+            } = event
+            {
                 self.user_id = user_id.to_string();
                 self.email = match credentials {
-                    Credentials::EmailPassword(email, _) => email.to_string(),
+                    Credentials::EmailPassword { email, .. } => email.to_string(),
                 };
             }
         }

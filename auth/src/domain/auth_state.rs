@@ -13,19 +13,19 @@ impl<'a> AuthState<'a> {
     pub fn is_registered(&self) -> bool {
         return self
             .iter()
-            .any(|event| matches!(event, AuthEvent::Registered(..)));
+            .any(|event| matches!(event, AuthEvent::Registered { .. }));
     }
 
-    pub fn verify_password(&mut self, password: &Password) -> bool {
+    pub fn verify_password(&self, password: &Password) -> bool {
         let password_hash: &PasswordHash = &password.into();
         let current_password_hash = self
             .iter()
             .filter_map(|event| match event {
-                AuthEvent::Registered(_, credentials) => Some(credentials),
+                AuthEvent::Registered { credentials, .. } => Some(credentials),
                 _ => None,
             })
             .map(|credentials| match credentials {
-                Credentials::EmailPassword(_, password_hash) => password_hash,
+                Credentials::EmailPassword { password, .. } => password_hash,
             })
             .last();
 
@@ -38,7 +38,7 @@ impl<'a> AuthState<'a> {
     pub fn user_id(&self) -> Option<&UserId> {
         self.iter()
             .filter_map(|event| match event {
-                AuthEvent::Registered(user_id, _) => Some(user_id),
+                AuthEvent::Registered { user_id, .. } => Some(user_id),
                 _ => None,
             })
             .last()

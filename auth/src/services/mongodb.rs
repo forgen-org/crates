@@ -28,51 +28,51 @@ impl MongoDbService {
 
 #[async_trait]
 impl AuthStore for MongoDbService {
-    async fn pull_by_email(&self, email: &Email) -> Result<Vec<AuthEvent>, AuthStoreError> {
+    async fn pull_by_email(&self, email: &Email) -> Result<Vec<AuthEvent>, ServiceError> {
         self.event
-            .find(doc! {"email": email.to_string()}, None)
+            .find(doc! {"credentials.email": email.to_string()}, None)
             .await
-            .map_err(|_| AuthStoreError::DatabaseError)?
+            .map_err(ServiceError::from)?
+            // .map_err(ServiceError::into)?
             .try_collect()
             .await
-            .map_err(|_| AuthStoreError::DatabaseError)
+            .map_err(ServiceError::from)
+        // .map_err(ServiceError::into)
     }
-    async fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<AuthEvent>, AuthStoreError> {
+    async fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<AuthEvent>, ServiceError> {
         self.event
             .find(doc! {"user_id": user_id.to_string()}, None)
             .await
-            .map_err(|_| AuthStoreError::DatabaseError)?
+            .map_err(ServiceError::from)?
             .try_collect()
             .await
-            .map_err(|_| AuthStoreError::DatabaseError)
+            .map_err(ServiceError::from)
     }
 
-    async fn push(&self, events: &[AuthEvent]) -> Result<(), AuthStoreError> {
+    async fn push(&self, events: &[AuthEvent]) -> Result<(), ServiceError> {
         self.event
             .insert_many(events, None)
             .await
-            .map_err(|_| AuthStoreError::DatabaseError)?;
-        Ok(())
+            .map(|_| ())
+            .map_err(ServiceError::from)
     }
 }
 
 #[async_trait]
 impl UserRepository for MongoDbService {
-    async fn find_by_email(&self, email: &Email) -> Result<User, UserRepositoryError> {
+    async fn find_by_email(&self, email: &Email) -> Result<Option<User>, ServiceError> {
         self.user
             .find_one(doc! {"email": email.to_string()}, None)
             .await
-            .map_err(|_| UserRepositoryError::UserNotFound)?
-            .ok_or(UserRepositoryError::UserNotFound)
+            .map_err(ServiceError::from)
     }
-    async fn find_by_user_id(&self, user_id: &UserId) -> Result<User, UserRepositoryError> {
+    async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, ServiceError> {
         self.user
             .find_one(doc! {"user_id": user_id.to_string()}, None)
             .await
-            .map_err(|_| UserRepositoryError::UserNotFound)?
-            .ok_or(UserRepositoryError::UserNotFound)
+            .map_err(ServiceError::from)
     }
-    async fn save(&self, projection: &User) -> Result<(), UserRepositoryError> {
+    async fn save(&self, projection: &User) -> Result<(), ServiceError> {
         self.user
             .replace_one(
                 doc! {"user_id": projection.user_id.clone()},
@@ -80,7 +80,13 @@ impl UserRepository for MongoDbService {
                 ReplaceOptions::builder().upsert(true).build(),
             )
             .await
-            .map_err(|_| UserRepositoryError::UserNotFound)?;
-        Ok(())
+            .map(|_| ())
+            .map_err(ServiceError::from)
+    }
+}
+
+impl From<mongodb::error::Error> for ServiceError {
+    fn from(error: mongodb::error::Error) -> Self {
+        ServiceError::UnknownError(format!("MongoDbService: {:?}", error))
     }
 }

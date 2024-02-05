@@ -18,22 +18,28 @@ impl JwtService {
 
 #[async_trait]
 impl JwtPort for JwtService {
-    async fn sign(&self, user: &User) -> Result<Jwt, JwtPortError> {
+    async fn sign(&self, user: &User) -> Result<Jwt, ServiceError> {
         let header = Header {
             algorithm: AlgorithmType::Hs384,
             ..Default::default()
         };
         let token = Token::new(header, user)
             .sign_with_key(&self.key)
-            .map_err(|_| JwtPortError::UnknownError)?;
+            .map_err(ServiceError::from)?;
         Ok(Jwt(token.as_str().to_string()))
     }
-    async fn verify(&self, token: &Jwt) -> Result<User, JwtPortError> {
+    async fn verify(&self, token: &Jwt) -> Result<User, ServiceError> {
         let token: Token<Header, User, _> = token
             .0
             .verify_with_key(&self.key)
-            .map_err(|_| JwtPortError::UnknownError)?;
+            .map_err(ServiceError::from)?;
         let user = token.claims();
         Ok(user.clone())
+    }
+}
+
+impl From<jwt::error::Error> for ServiceError {
+    fn from(error: jwt::error::Error) -> Self {
+        ServiceError::UnknownError(format!("JwtService: {:?}", error))
     }
 }

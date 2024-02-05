@@ -19,15 +19,25 @@ where
 {
     async fn execute(&self, runtime: &R) -> Result<(), AuthCommandError> {
         let email = Email::parse(&self.email)?;
-        dispatch(
-            runtime,
-            &AuthStore::pull_by_email(runtime, &email).await?,
-            &AuthMessage::Register(RegisterMethod::EmailPassword(
+
+        let existing_events = &AuthStore::pull_by_email(runtime, &email).await?;
+
+        let new_events = &AuthMessage::Register {
+            method: RegisterMethod::EmailPassword {
                 email,
-                Password::parse(&self.password)?,
-            )),
-        )
-        .await?;
+                password: Password::parse(&self.password)?,
+            },
+        }
+        .send(existing_events)?;
+
+        // Push new events
+        AuthStore::push(runtime, &new_events).await?;
+
+        // Recompute user projection
+        let mut user = User::default();
+        user.apply(&new_events);
+        UserRepository::save(runtime, &user).await?;
+
         Ok(())
     }
 }
@@ -45,15 +55,26 @@ where
 {
     async fn execute(&self, runtime: &R) -> Result<(), AuthCommandError> {
         let email = Email::parse(&self.email)?;
-        dispatch(
-            runtime,
-            &AuthStore::pull_by_email(runtime, &email).await?,
-            &AuthMessage::LogIn(RegisterMethod::EmailPassword(
-                email,
-                Password::parse(&self.password)?,
-            )),
-        )
-        .await?;
+
+        let existing_events = &AuthStore::pull_by_email(runtime, &email).await?;
+
+        let new_events = &AuthMessage::LogIn {
+            method: RegisterMethod::EmailPassword {
+                email: email.clone(),
+                password: Password::parse(&self.password)?,
+            },
+        }
+        .send(existing_events)?;
+
+        // Push new events
+        AuthStore::push(runtime, &new_events).await?;
+
+        // Recompute user projection
+        let state = AuthState(new_events);
+        if let Some(user_id) = state.user_id() {
+            recompute_user_projection(runtime, &user_id, new_events).await;
+        }
+
         Ok(())
     }
 }
@@ -63,36 +84,25 @@ pub enum AuthCommandError {
     #[error(transparent)]
     AuthError(#[from] AuthError),
     #[error(transparent)]
-    AuthStoreError(#[from] AuthStoreError),
-    #[error(transparent)]
     EmailError(#[from] EmailError),
     #[error(transparent)]
     PasswordError(#[from] PasswordError),
     #[error(transparent)]
-    UserRepositoryError(#[from] UserRepositoryError),
+    ServiceError(#[from] ServiceError),
 }
 
-async fn dispatch<R>(
-    runtime: &R,
-    existing_events: &[AuthEvent],
-    message: &AuthMessage,
-) -> Result<(), AuthCommandError>
+async fn recompute_user_projection<R>(runtime: &R, user_id: &UserId, new_events: &[AuthEvent])
 where
-    R: Runtime + AuthStore + UserRepository,
+    R: Runtime + UserRepository + AuthStore,
 {
-    let new_events = message.send(existing_events)?;
-
-    // Push new events
-    AuthStore::push(runtime, &new_events).await?;
-
-    let state = AuthState(&new_events);
-
-    if let Some(user_id) = state.user_id() {
-        // Recompute projections
-        let mut projection = UserRepository::find_by_user_id(runtime, user_id).await?;
-        projection.apply(&new_events);
-        UserRepository::save(runtime, &projection).await?;
+    if let Some(mut user) = runtime.find_by_user_id(user_id).await.unwrap() {
+        user.apply(&new_events);
+        UserRepository::save(runtime, &user).await.unwrap();
+    } else {
+        let mut user = User::default();
+        let existing_events = AuthStore::pull_by_user_id(runtime, user_id).await.unwrap();
+        user.apply(&existing_events);
+        user.apply(&new_events);
+        UserRepository::save(runtime, &user).await.unwrap();
     }
-
-    Ok(())
 }

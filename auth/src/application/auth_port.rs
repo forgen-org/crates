@@ -2,48 +2,43 @@ pub use crate::application::auth_projection::User;
 pub use crate::domain::auth_event::Credentials;
 pub use crate::domain::auth_scalar::Email;
 pub use crate::domain::{auth_event::AuthEvent, auth_scalar::UserId};
+use chrono::{DateTime, Utc};
 use framework::*;
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Error)]
+pub enum ServiceError {
+    #[error("Service error: {0}")]
+    UnknownError(String),
+}
+
+impl From<String> for ServiceError {
+    fn from(error: String) -> Self {
+        ServiceError::UnknownError(error)
+    }
+}
 
 #[async_trait]
 #[delegate]
 pub trait AuthStore {
-    async fn pull_by_email(&self, email: &Email) -> Result<Vec<AuthEvent>, AuthStoreError>;
-    async fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<AuthEvent>, AuthStoreError>;
-    async fn push(&self, events: &[AuthEvent]) -> Result<(), AuthStoreError>;
-}
-
-#[derive(Debug, Error)]
-pub enum AuthStoreError {
-    #[error("Database error")]
-    DatabaseError,
+    async fn pull_by_email(&self, email: &Email) -> Result<Vec<AuthEvent>, ServiceError>;
+    async fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<AuthEvent>, ServiceError>;
+    async fn push(&self, events: &[AuthEvent]) -> Result<(), ServiceError>;
 }
 
 #[async_trait]
 #[delegate]
 pub trait UserRepository {
-    async fn find_by_email(&self, email: &Email) -> Result<User, UserRepositoryError>;
-    async fn find_by_user_id(&self, user_id: &UserId) -> Result<User, UserRepositoryError>;
-    async fn save(&self, projection: &User) -> Result<(), UserRepositoryError>;
-}
-
-#[derive(Debug, Error)]
-pub enum UserRepositoryError {
-    #[error("User not found")]
-    UserNotFound,
+    async fn find_by_email(&self, email: &Email) -> Result<Option<User>, ServiceError>;
+    async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, ServiceError>;
+    async fn save(&self, projection: &User) -> Result<(), ServiceError>;
 }
 
 #[async_trait]
 #[delegate]
 pub trait JwtPort {
-    async fn sign(&self, user: &User) -> Result<Jwt, JwtPortError>;
-    async fn verify(&self, token: &Jwt) -> Result<User, JwtPortError>;
-}
-
-#[derive(Debug, Error)]
-pub enum JwtPortError {
-    #[error("Unknown error")]
-    UnknownError,
+    async fn sign(&self, user: &User) -> Result<Jwt, ServiceError>;
+    async fn verify(&self, token: &Jwt) -> Result<User, ServiceError>;
 }
 
 #[derive(Serialize, Deserialize)]

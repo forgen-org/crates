@@ -77,6 +77,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "axum-test",
+ "chrono",
  "framework",
  "futures",
  "hmac",
@@ -323,7 +324,10 @@ checksum = "9f13690e35a5e4ace198e7beea2895d29f3a9cc55015fcebe6336bd2010af9eb"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
+ "serde",
+ "wasm-bindgen",
  "windows-targets 0.52.0",
 ]
 
