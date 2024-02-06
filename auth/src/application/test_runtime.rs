@@ -39,14 +39,12 @@ impl UserRepository for TestRuntime {
         Ok(())
     }
 }
-
-#[async_trait]
 impl JwtPort for TestRuntime {
-    async fn sign(&self, _user: &User) -> Result<Jwt, ServiceError> {
+    fn sign(&self, _user: &User) -> Result<Jwt, ServiceError> {
         Ok(Jwt("jwt".to_string()))
     }
 
-    async fn verify(&self, _token: &Jwt) -> Result<User, ServiceError> {
+    fn verify(&self, _token: &Jwt) -> Result<User, ServiceError> {
         Ok(User {
             email: "email@example.com".to_string(),
             user_id: UserId::default().to_string(),

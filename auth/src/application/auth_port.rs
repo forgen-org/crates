@@ -34,11 +34,10 @@ pub trait UserRepository {
     async fn save(&self, projection: &User) -> Result<(), ServiceError>;
 }
 
-#[async_trait]
 #[delegate]
 pub trait JwtPort {
-    async fn sign(&self, user: &User) -> Result<Jwt, ServiceError>;
-    async fn verify(&self, token: &Jwt) -> Result<User, ServiceError>;
+    fn sign(&self, user: &User) -> Result<Jwt, ServiceError>;
+    fn verify(&self, token: &Jwt) -> Result<User, ServiceError>;
 }
 
 #[derive(Serialize, Deserialize)]

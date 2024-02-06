@@ -16,7 +16,7 @@ where
         let user = UserRepository::find_by_email(runtime, &email)
             .await?
             .ok_or(GetJwtByEmailError::UserNotFound)?;
-        let jwt = JwtPort::sign(runtime, &user).await?;
+        let jwt = JwtPort::sign(runtime, &user)?;
         Ok(jwt)
     }
 }

@@ -1,5 +1,4 @@
 use crate::application::auth_port::*;
-use framework::*;
 use hmac::Hmac;
 use jwt::{AlgorithmType, Header, SignWithKey, Token, VerifyWithKey};
 use sha2::{digest::KeyInit, Sha384};
@@ -16,9 +15,8 @@ impl JwtService {
     }
 }
 
-#[async_trait]
 impl JwtPort for JwtService {
-    async fn sign(&self, user: &User) -> Result<Jwt, ServiceError> {
+    fn sign(&self, user: &User) -> Result<Jwt, ServiceError> {
         let header = Header {
             algorithm: AlgorithmType::Hs384,
             ..Default::default()
@@ -28,7 +26,7 @@ impl JwtPort for JwtService {
             .map_err(ServiceError::from)?;
         Ok(Jwt(token.as_str().to_string()))
     }
-    async fn verify(&self, token: &Jwt) -> Result<User, ServiceError> {
+    fn verify(&self, token: &Jwt) -> Result<User, ServiceError> {
         let token: Token<Header, User, _> = token
             .0
             .verify_with_key(&self.key)
