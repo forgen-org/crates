@@ -27,24 +27,6 @@ pub trait Projection: Default + Serialize + for<'de> serde::Deserialize<'de> {
 
 pub trait Runtime: Send + Sync {}
 
-// pub trait Store<T, E>
-// where
-//     T: Event,
-// {
-//     fn pull(&self) -> Result<Vec<T>, E>;
-//     fn push(&self, events: &[T]) -> Result<(), E>;
-// }
-
-// pub trait Repository<P, E>
-// where
-//     P: Projection,
-// {
-//     type Filter;
-
-//     fn find(&self, filter: Self::Filter) -> Result<P, E>;
-//     fn save(&self, projection: &P) -> Result<(), E>;
-// }
-
 #[async_trait]
 pub trait Command<R, E>
 where

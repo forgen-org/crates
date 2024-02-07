@@ -42,10 +42,10 @@ pub enum AuthError {
 
 impl Message<AuthEvent, AuthError> for AuthMessage {
     fn send(&self, events: &[AuthEvent]) -> Result<Vec<AuthEvent>, AuthError> {
-        let state = AuthState(events);
+        let state = AuthState::new(events);
         match self {
             AuthMessage::Register { method } => {
-                if state.is_registered() {
+                if state.is_registered {
                     Err(AuthError::AlreadyRegistered)
                 } else {
                     let user_id = UserId::default();
@@ -59,8 +59,8 @@ impl Message<AuthEvent, AuthError> for AuthMessage {
             AuthMessage::LogIn { method } => {
                 let RegisterMethod::EmailPassword { password, .. } = method;
 
-                if let Some(user_id) = state.user_id() {
-                    if state.verify_password(password) {
+                if let Some(user_id) = state.user_id {
+                    if state.password_hash == Some(&password.into()) {
                         Ok(vec![AuthEvent::LoggedIn {
                             at: chrono::Utc::now(),
                             user_id: user_id.clone(),

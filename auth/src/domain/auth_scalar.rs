@@ -76,7 +76,7 @@ pub enum PasswordError {
     InvalidLength,
 }
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(PartialEq, Serialize, Deserialize)]
 pub struct PasswordHash([u8; 32]);
 
 impl From<Password> for PasswordHash {

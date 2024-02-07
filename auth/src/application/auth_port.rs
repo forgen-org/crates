@@ -2,7 +2,6 @@ pub use crate::application::auth_projection::User;
 pub use crate::domain::auth_event::Credentials;
 pub use crate::domain::auth_scalar::Email;
 pub use crate::domain::{auth_event::AuthEvent, auth_scalar::UserId};
-use chrono::{DateTime, Utc};
 use framework::*;
 use serde::{Deserialize, Serialize};
 

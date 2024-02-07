@@ -18,6 +18,7 @@ serde = "1.0.196"
 serde_json = "1.0.113"
 sha2 = "0.10.8"
 uuid = { version = "1.7.0", features = ["serde", "v4"] }
+wasm-bindgen = { version = "0.2.90", optional = true }
 
 [dev-dependencies]
 axum-test = "14.3.0"
@@ -26,6 +27,7 @@ serde_json = "1.0.113"
 tokio = { version = "1.0", features = ["full"] }
 
 [features]
-default = ["axum", "mongodb"]
+default = ["axum", "mongodb", "wasm"]
 axum = ["dep:axum"]
 mongodb = ["dep:futures", "dep:mongodb"]
+wasm = ["dep:wasm-bindgen"]

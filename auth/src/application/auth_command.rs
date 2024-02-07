@@ -70,8 +70,8 @@ where
         AuthStore::push(runtime, &new_events).await?;
 
         // Recompute user projection
-        let state = AuthState(new_events);
-        if let Some(user_id) = state.user_id() {
+        let state = AuthState::new(new_events);
+        if let Some(user_id) = state.user_id {
             recompute_user_projection(runtime, &user_id, new_events).await;
         }
 
