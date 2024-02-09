@@ -1,9 +1,6 @@
-mod error;
-mod handler;
-mod middleware;
+mod api;
+mod jwt_guard;
 mod router;
 
-pub use error::ApiError;
-pub use handler::*;
-pub use middleware::auth_middleware;
+pub use jwt_guard::jwt_guard;
 pub use router::AuthRouter;

@@ -1,7 +1,7 @@
 use framework::*;
 
 #[derive(Delegate)]
-pub struct AuthRuntime {
+pub struct Runtime {
     #[cfg(feature = "mongodb")]
     #[to(AuthStore, UserRepository)]
     mongodb_service: crate::services::mongodb::MongoDbService,
@@ -10,7 +10,7 @@ pub struct AuthRuntime {
     jwt_service: crate::services::jwt::JwtService,
 }
 
-impl AuthRuntime {
+impl Runtime {
     pub async fn new(jwt_secret: &str) -> Self {
         Self {
             #[cfg(feature = "mongodb")]
@@ -20,4 +20,4 @@ impl AuthRuntime {
     }
 }
 
-impl Runtime for AuthRuntime {}
+impl Framework for Runtime {}

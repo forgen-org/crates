@@ -8,6 +8,7 @@ special = [
     "Copy",
     "Clone",
     "Default",
+    "Error",
     "Debug",
     "PartialEq",
     "Eq",

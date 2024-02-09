@@ -1,13 +1,12 @@
 mod effect;
 mod function;
 
-use std::{ops::Deref, sync::Arc};
-
 use effect::*;
-use function::*;
+// use function::*;
 
 struct LoginCommand {
     username: String,
+    #[allow(dead_code)]
     password: String,
 }
 
@@ -56,7 +55,6 @@ async fn main() {
 
     let effect = command.to_effect();
 
-    let res = effect.run(runtime).await;
     let res = effect.run(runtime).await;
 
     println!("res: {:?}", res);

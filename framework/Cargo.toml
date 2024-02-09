@@ -8,5 +8,4 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.74"
 auto-delegate = "0.0.9"
-serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0.51"

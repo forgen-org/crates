@@ -1,12 +1,7 @@
-use super::auth_scalar::UserId;
-use crate::domain::auth_scalar::{Email, PasswordHash};
+use super::scalar::{Email, PasswordHash, UserId};
 use chrono::{DateTime, Utc};
-use framework::Event;
-use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "_tag")]
-pub enum AuthEvent {
+pub enum Event {
     Registered {
         at: DateTime<Utc>,
         credentials: Credentials,
@@ -22,13 +17,9 @@ pub enum AuthEvent {
     },
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "_tag")]
 pub enum Credentials {
     EmailPassword {
         email: Email,
-        password: PasswordHash,
+        password_hash: PasswordHash,
     },
 }
-
-impl Event for AuthEvent {}
