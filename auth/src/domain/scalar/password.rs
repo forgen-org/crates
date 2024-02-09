@@ -1,5 +1,6 @@
 use framework::*;
 
+#[derive(Clone)]
 pub struct Password(String);
 
 impl Password {

@@ -16,12 +16,12 @@ where
 {
     type Error = UnexpectedError;
 
-    async fn execute(self, runtime: &R) -> Result<(), Self::Error> {
+    async fn execute(&self, runtime: &R) -> Result<(), Self::Error> {
         // Caching projections
         let mut users = HashMap::<UserId, User>::new();
 
         // Applying events
-        for event in self.0 {
+        for event in &self.0 {
             let user_id = match &event {
                 domain::Event::Registered { user_id, .. } => user_id.clone(),
                 domain::Event::LoggedIn { user_id, .. } => user_id.clone(),

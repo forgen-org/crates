@@ -17,17 +17,17 @@ where
 {
     type Error = CommandError;
 
-    async fn execute(self, runtime: &R) -> Result<(), CommandError> {
-        let story = domain::Story(AuthStore::pull_by_email(runtime, &self.email).await?);
+    async fn execute(&self, runtime: &R) -> Result<(), CommandError> {
+        let existing_events = AuthStore::pull_by_email(runtime, &self.email).await?;
 
-        let events = story.dispatch(&domain::Message::Register {
+        let new_events = existing_events.dispatch(&domain::Message::Register {
             method: domain::RegisterMethod::EmailPassword {
-                email: self.email,
-                password: self.password,
+                email: self.email.clone(),
+                password: self.password.clone(),
             },
         })?;
 
-        EventBus(events).execute(runtime).await?;
+        EventBus(new_events).execute(runtime).await?;
 
         Ok(())
     }
@@ -46,17 +46,17 @@ where
 {
     type Error = CommandError;
 
-    async fn execute(self, runtime: &R) -> Result<(), CommandError> {
-        let story = domain::Story(AuthStore::pull_by_email(runtime, &self.email).await?);
+    async fn execute(&self, runtime: &R) -> Result<(), CommandError> {
+        let existing_events = AuthStore::pull_by_email(runtime, &self.email).await?;
 
-        let events = story.dispatch(&domain::Message::LogIn {
+        let new_events = existing_events.dispatch(&domain::Message::LogIn {
             method: domain::RegisterMethod::EmailPassword {
-                email: self.email,
-                password: self.password,
+                email: self.email.clone(),
+                password: self.password.clone(),
             },
         })?;
 
-        EventBus(events).execute(runtime).await?;
+        EventBus(new_events).execute(runtime).await?;
 
         Ok(())
     }

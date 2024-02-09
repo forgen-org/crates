@@ -1,6 +1,6 @@
 use super::password::Password;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub struct PasswordHash(pub [u8; 32]);
 
 impl From<Password> for PasswordHash {

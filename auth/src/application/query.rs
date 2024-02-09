@@ -15,7 +15,7 @@ where
     type Output = Jwt;
     type Error = GetJwtByEmailError;
 
-    async fn fetch(self, runtime: &R) -> Result<Jwt, GetJwtByEmailError> {
+    async fn fetch(&self, runtime: &R) -> Result<Jwt, GetJwtByEmailError> {
         let user = UserRepository::find_by_email(runtime, &self.email)
             .await?
             .ok_or(GetJwtByEmailError::UserNotFound)?;

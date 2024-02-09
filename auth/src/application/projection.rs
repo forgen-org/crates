@@ -7,10 +7,8 @@ pub struct User {
     pub user_id: String,
 }
 
-impl Project for User {
-    type Event = Event;
-
-    fn apply(&mut self, event: &Self::Event) -> &mut Self {
+impl Project<Event> for User {
+    fn apply(&mut self, event: &Event) -> &mut Self {
         if let Event::Registered {
             user_id,
             credentials,

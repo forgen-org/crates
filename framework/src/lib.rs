@@ -10,25 +10,38 @@ pub use tracing::{debug, error, info, trace, warn};
 
 use short_backtrace::ShortBacktrace;
 
-/// Should be implemented on Vec<Event>
-pub trait Dispatch {
+/// Should be implemented on Messages
+pub trait Dispatch<E> {
     type Error: std::error::Error;
-    type Event;
-    type Message;
-    fn dispatch(&self, message: &Self::Message) -> Result<Vec<Self::Event>, Self::Error>;
+    fn dispatch(&self, events: &[E]) -> Result<Vec<E>, Self::Error>;
+}
+
+/// Automatically implemented on Vec<Event>
+pub trait Story<E> {
+    fn dispatch<T>(&self, message: &T) -> Result<Vec<E>, T::Error>
+    where
+        T: Dispatch<E>;
+}
+
+impl<E> Story<E> for Vec<E> {
+    fn dispatch<T>(&self, message: &T) -> Result<Vec<E>, T::Error>
+    where
+        T: Dispatch<E>,
+    {
+        message.dispatch(self)
+    }
 }
 
 /// Should be implemented on Projections
-pub trait Project: Default {
-    type Event;
-    fn apply(&mut self, event: &Self::Event) -> &mut Self;
-    fn apply_all(&mut self, events: &[Self::Event]) -> &mut Self {
+pub trait Project<E>: Default {
+    fn apply(&mut self, event: &E) -> &mut Self;
+    fn apply_all(&mut self, events: &[E]) -> &mut Self {
         for event in events {
             self.apply(event);
         }
         self
     }
-    fn project(events: &[Self::Event]) -> Self {
+    fn project(events: &[E]) -> Self {
         let mut value = Self::default();
         value.apply_all(events);
         value
@@ -36,9 +49,9 @@ pub trait Project: Default {
 }
 
 /// Should be implemented on Snapshots
-pub trait Rewind: Project {
+pub trait Rewind<E>: Project<E> {
     type Error: std::error::Error;
-    fn rewind(&self) -> Result<Vec<Self::Event>, Self::Error>;
+    fn rewind(&self) -> Result<Vec<E>, Self::Error>;
 }
 
 /// Should be implemented on Commands
@@ -48,7 +61,7 @@ where
     R: Send + Sync,
 {
     type Error: std::error::Error;
-    async fn execute(self, runtime: &R) -> Result<(), Self::Error>;
+    async fn execute(&self, runtime: &R) -> Result<(), Self::Error>;
 }
 
 /// Should be implemented on Queries
@@ -59,7 +72,7 @@ where
 {
     type Output;
     type Error: std::error::Error;
-    async fn fetch(self, runtime: &R) -> Result<Self::Output, Self::Error>;
+    async fn fetch(&self, runtime: &R) -> Result<Self::Output, Self::Error>;
 }
 
 #[async_trait]
