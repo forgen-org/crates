@@ -1,13 +1,18 @@
+mod short_backtrace;
+
 pub extern crate auto_delegate;
 pub extern crate thiserror;
 
 pub use async_trait::async_trait;
 pub use auto_delegate::*;
 pub use thiserror::*;
+pub use tracing::{debug, error, info, trace, warn};
+
+use short_backtrace::ShortBacktrace;
 
 /// Should be implemented on Vec<Event>
 pub trait Dispatch {
-    type Error;
+    type Error: std::error::Error;
     type Event;
     type Message;
     fn dispatch(&self, message: &Self::Message) -> Result<Vec<Self::Event>, Self::Error>;
@@ -32,7 +37,7 @@ pub trait Project: Default {
 
 /// Should be implemented on Snapshots
 pub trait Rewind: Project {
-    type Error;
+    type Error: std::error::Error;
     fn rewind(&self) -> Result<Vec<Self::Event>, Self::Error>;
 }
 
@@ -42,7 +47,7 @@ pub trait Execute<R>
 where
     R: Send + Sync,
 {
-    type Error;
+    type Error: std::error::Error;
     async fn execute(self, runtime: &R) -> Result<(), Self::Error>;
 }
 
@@ -53,37 +58,9 @@ where
     R: Send + Sync,
 {
     type Output;
-    type Error;
+    type Error: std::error::Error;
     async fn fetch(self, runtime: &R) -> Result<Self::Output, Self::Error>;
 }
-
-// #[derive(Clone)]
-// pub struct Framework<R> {
-//     runtime: R,
-// }
-
-// impl<R> Framework<R>
-// where
-//     R: Send + Sync,
-// {
-//     pub fn new(runtime: R) -> Self {
-//         Framework { runtime }
-//     }
-
-//     pub async fn execute<T>(&self, command: T) -> Result<(), T::Error>
-//     where
-//         T: Execute<R>,
-//     {
-//         command.execute(&self.runtime).await
-//     }
-
-//     pub async fn fetch<T>(&self, query: T) -> Result<T::Output, T::Error>
-//     where
-//         T: Fetch<R>,
-//     {
-//         query.fetch(&self.runtime).await
-//     }
-// }
 
 #[async_trait]
 pub trait Framework: Send + Sync + Sized {
@@ -91,24 +68,33 @@ pub trait Framework: Send + Sync + Sized {
     where
         T: Execute<Self> + Send + Sync,
     {
-        command.execute(&self).await
+        command.execute(self).await
     }
 
     async fn fetch<T>(&self, query: T) -> Result<T::Output, T::Error>
     where
         T: Fetch<Self> + Send + Sync,
     {
-        query.fetch(&self).await
+        query.fetch(self).await
     }
 }
 
 /// Generic Error
 #[derive(Error, Debug)]
-#[error("An unexpected error occurred: {0}")]
-pub struct UnexpectedError(String);
+#[error("An unexpected error occurred: {message}")]
+pub struct UnexpectedError {
+    message: String,
+}
 
 impl UnexpectedError {
-    pub fn from<T: std::fmt::Display>(err: T) -> Self {
-        UnexpectedError(format!("{}", err))
+    pub fn from<T: std::error::Error>(err: T) -> Self {
+        error!(
+            error = %err,
+            backtrace = ?ShortBacktrace::new(),
+            "Unexpected Error"
+        );
+        UnexpectedError {
+            message: err.to_string(),
+        }
     }
 }
