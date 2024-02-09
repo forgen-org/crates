@@ -24,7 +24,7 @@ where
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Error, Debug)]
 pub enum GetJwtByEmailError {
     #[error("User not found")]
     UserNotFound,

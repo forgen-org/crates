@@ -62,7 +62,7 @@ where
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Error, Debug)]
 pub enum CommandError {
     #[error(transparent)]
     DomainError(#[from] domain::Error),

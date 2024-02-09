@@ -1,6 +1,6 @@
 use framework::*;
 
-#[derive(Debug, Error)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("Already registered")]
     AlreadyRegistered,

@@ -33,7 +33,7 @@ trait JwtService {
     fn generate(&self, username: &str) -> String;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Copy, Clone)]
 struct SomeJwtService;
 
 impl JwtService for SomeJwtService {

@@ -20,7 +20,7 @@ impl Password {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Error, Debug)]
 pub enum PasswordError {
     #[error("Password must be between 8 and 20 characters")]
     InvalidLength,

@@ -27,7 +27,7 @@ impl ToString for Email {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Error, Debug)]
 pub enum EmailError {
     #[error("Invalid email")]
     InvalidEmail,
