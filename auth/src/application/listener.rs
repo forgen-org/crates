@@ -1,32 +1,28 @@
-use self::event::Event;
-
 use super::port::*;
 use super::projection::User;
+use super::transaction::Transaction;
 use crate::domain::scalar::*;
-use crate::*;
+use crate::domain::Event;
 use framework::*;
 use futures::stream::StreamExt;
 use std::collections::HashMap;
 
 pub struct RecomputeUserProjections(pub Vec<Event>);
 
-#[async_trait]
-impl<R> Execute<R> for RecomputeUserProjections
-where
-    R: EventStore + UserRepository,
-    R: Send + Sync,
-{
-    type Error = UnexpectedError;
-
-    async fn execute(&self, runtime: &R) -> Result<(), UnexpectedError> {
+impl RecomputeUserProjections {
+    async fn reflect<R>(&self, runtime: &R) -> Result<Vec<UserId>, UnexpectedError>
+    where
+        R: EventStore + TransactionBus + UserRepository,
+        R: Send + Sync,
+    {
         // Caching projections
         let mut users = HashMap::<UserId, User>::new();
 
         // Applying events
         for event in self.0.iter() {
             let user_id = match event {
-                domain::Event::Registered { user_id, .. } => user_id.clone(),
-                domain::Event::LoggedIn { user_id, .. } => user_id.clone(),
+                Event::Registered { user_id, .. } => user_id.clone(),
+                Event::LoggedIn { user_id, .. } => user_id.clone(),
                 _ => continue,
             };
 
@@ -46,7 +42,7 @@ where
                 },
             };
 
-            user.apply(event);
+            user.apply(&event);
         }
 
         // Save projections
@@ -54,20 +50,33 @@ where
             UserRepository::save(runtime, user).await?;
         }
 
-        Ok(())
+        Ok(users.keys().cloned().collect())
     }
 }
 
 #[async_trait]
 impl<R> Listen<R> for RecomputeUserProjections
 where
-    R: EventBus + EventStore + UserRepository,
+    R: EventBus + EventStore + TransactionBus + UserRepository,
     R: Send + Sync,
 {
     async fn listen(runtime: &R) {
-        while let Some(events) = EventBus::subscribe(runtime).next().await {
-            if let Err(err) = RecomputeUserProjections(events).execute(runtime).await {
-                error!("Failed to recompute user projections: {}", err);
+        while let Some((id, events)) = EventBus::subscribe(runtime).next().await {
+            match RecomputeUserProjections(events).reflect(runtime).await {
+                Ok(user_ids) => {
+                    for user_id in user_ids {
+                        TransactionBus::publish(
+                            runtime,
+                            Transaction::UserProjected {
+                                id: id.clone(),
+                                user_id,
+                            },
+                        );
+                    }
+                }
+                Err(err) => {
+                    error!("Failed to recompute user projections: {}", err);
+                }
             }
         }
     }

@@ -6,7 +6,7 @@ pub struct Runtime {
     #[to(EventStore, UserRepository)]
     mongodb_service: crate::services::mongodb::MongoDbService,
 
-    #[to(EventBus)]
+    #[to(EventBus, TransactionBus)]
     membus: crate::services::membus::MemBus,
 
     #[to(JwtPort)]
@@ -19,11 +19,9 @@ impl Runtime {
             #[cfg(feature = "mongodb")]
             mongodb_service: crate::services::mongodb::MongoDbService::new().await,
 
-            membus: crate::services::membus::MemBus::new(),
+            membus: crate::services::membus::MemBus::default(),
 
             jwt_service: crate::services::jwt::JwtService::new(jwt_secret),
         }
     }
 }
-
-impl Framework for Runtime {}

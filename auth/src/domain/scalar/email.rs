@@ -1,7 +1,7 @@
 use framework::*;
 use regex::Regex;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct Email(String);
 
 impl Email {

@@ -1,8 +1,11 @@
-use crate::application::{
-    command::Register,
-    port::*,
-    query::GetJwtByEmail,
-    scalar::{Email, Password},
+use crate::{
+    application::{
+        command::Register,
+        port::*,
+        query::GetJwtByUserId,
+        scalar::{Email, Password},
+    },
+    transaction::Transaction,
 };
 use axum::{
     extract::State,
@@ -13,32 +16,39 @@ use axum::{
 use framework::*;
 use serde::Deserialize;
 use std::sync::Arc;
-use tokio_retry::{strategy::ExponentialBackoff, Retry};
 
 pub async fn handler<R>(
     State(runtime): State<Arc<R>>,
     Json(payload): Json<Payload>,
 ) -> Result<String, Response>
 where
-    R: Framework,
-    R: EventBus + EventStore + JwtPort + UserRepository,
+    R: EventBus + EventStore + JwtPort + TransactionBus + UserRepository,
+    R: Send + Sync,
 {
     let command = Register::try_from(payload)?;
-    let email = command.email.clone();
 
-    runtime
-        .execute(command)
+    let transaction_id = command
+        .execute(runtime.as_ref())
         .await
         .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response())?;
 
-    Retry::spawn(ExponentialBackoff::from_millis(100).take(8), || {
-        runtime.fetch(GetJwtByEmail {
-            email: email.clone(),
-        })
-    })
-    .await
-    .map(|jwt| jwt.0)
-    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", err)).into_response())
+    let user_id = loop {
+        if let Some(transaction) = TransactionBus::subscribe(runtime.as_ref()).next().await {
+            let Transaction::UserProjected { id, user_id } = transaction;
+            if id == transaction_id {
+                break user_id;
+            }
+        }
+    };
+
+    let query = GetJwtByUserId { user_id };
+
+    let jwt = query
+        .fetch(runtime.as_ref())
+        .await
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", err)).into_response())?;
+
+    Ok(jwt.0)
 }
 
 #[derive(Deserialize)]

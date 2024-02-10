@@ -24,13 +24,6 @@ impl EventStore for TestRuntime {
 
 #[async_trait]
 impl UserRepository for TestRuntime {
-    async fn find_by_email(&self, email: &Email) -> Result<Option<User>, UnexpectedError> {
-        Ok(Some(User {
-            email: email.to_string(),
-            user_id: UserId::default().to_string(),
-        }))
-    }
-
     async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError> {
         Ok(Some(User {
             email: "email@example.com".to_string(),
@@ -54,5 +47,3 @@ impl JwtPort for TestRuntime {
         })
     }
 }
-
-impl Framework for TestRuntime {}

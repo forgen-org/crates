@@ -1,5 +1,4 @@
-// use super::event_bus::EventBus;
-use crate::application::port::*;
+use super::port::*;
 use crate::domain;
 use crate::domain::scalar::*;
 use framework::*;
@@ -17,7 +16,7 @@ where
 {
     type Error = CommandError;
 
-    async fn execute(&self, runtime: &R) -> Result<(), CommandError> {
+    async fn execute(&self, runtime: &R) -> Result<TransactionId, Self::Error> {
         let user_id = EventStore::identify_by_email(runtime, &self.email).await?;
 
         let existing_events = match user_id {
@@ -31,9 +30,7 @@ where
         })?;
 
         EventStore::push(runtime, &new_events).await?;
-        EventBus::publish(runtime, new_events);
-
-        Ok(())
+        Ok(EventBus::publish(runtime, new_events))
     }
 }
 
@@ -50,7 +47,7 @@ where
 {
     type Error = CommandError;
 
-    async fn execute(&self, runtime: &R) -> Result<(), CommandError> {
+    async fn execute(&self, runtime: &R) -> Result<TransactionId, Self::Error> {
         let user_id = EventStore::identify_by_email(runtime, &self.email).await?;
 
         let existing_events = match user_id {
@@ -64,9 +61,7 @@ where
         })?;
 
         EventStore::push(runtime, &new_events).await?;
-        EventBus::publish(runtime, new_events);
-
-        Ok(())
+        Ok(EventBus::publish(runtime, new_events))
     }
 }
 

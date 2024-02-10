@@ -1,32 +1,38 @@
-use std::pin::Pin;
-
 use super::projection::User;
+use super::transaction::Transaction;
+use crate::domain;
 use crate::domain::scalar::*;
 use crate::domain::Event;
 use framework::*;
-use futures::stream::Stream;
-
-pub type EventStream = Pin<Box<dyn Stream<Item = Vec<Event>> + Send>>;
 
 #[async_trait]
 #[delegate]
 pub trait EventBus {
-    fn publish(&self, events: Vec<Event>);
-    fn subscribe(&self) -> EventStream;
+    fn publish(&self, events: Vec<Event>) -> TransactionId;
+    fn subscribe(&self) -> EventStream<Event>;
+}
+
+#[async_trait]
+#[delegate]
+pub trait TransactionBus {
+    fn publish(&self, transaction: Transaction);
+    fn subscribe(&self) -> TransactionStream<Transaction>;
 }
 
 #[async_trait]
 #[delegate]
 pub trait EventStore {
     async fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError>;
-    async fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<Event>, UnexpectedError>;
-    async fn push(&self, events: &[Event]) -> Result<(), UnexpectedError>;
+    async fn pull_by_user_id(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<domain::Event>, UnexpectedError>;
+    async fn push(&self, events: &[domain::Event]) -> Result<(), UnexpectedError>;
 }
 
 #[async_trait]
 #[delegate]
 pub trait UserRepository {
-    async fn find_by_email(&self, email: &Email) -> Result<Option<User>, UnexpectedError>;
     async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError>;
     async fn save(&self, projection: &User) -> Result<(), UnexpectedError>;
 }

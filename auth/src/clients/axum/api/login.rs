@@ -1,8 +1,11 @@
-use crate::application::{
-    command::Login,
-    port::*,
-    query::GetJwtByEmail,
-    scalar::{Email, Password},
+use crate::{
+    application::{
+        command::Login,
+        port::*,
+        query::GetJwtByUserId,
+        scalar::{Email, Password},
+    },
+    transaction::Transaction,
 };
 use axum::{
     extract::State,
@@ -11,6 +14,7 @@ use axum::{
     Json,
 };
 use framework::*;
+use futures::StreamExt;
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -19,19 +23,29 @@ pub async fn handler<R>(
     Json(payload): Json<Payload>,
 ) -> Result<String, Response>
 where
-    R: Framework,
-    R: EventBus + EventStore + JwtPort + UserRepository,
+    R: EventBus + EventStore + JwtPort + UserRepository + TransactionBus,
+    R: Send + Sync,
 {
     let command = Login::try_from(payload)?;
-    let email = command.email.clone();
 
-    runtime
-        .execute(command)
+    let transaction_id = command
+        .execute(runtime.as_ref())
         .await
         .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response())?;
 
-    let jwt = runtime
-        .fetch(GetJwtByEmail { email })
+    let user_id = loop {
+        if let Some(transaction) = TransactionBus::subscribe(runtime.as_ref()).next().await {
+            let Transaction::UserProjected { id, user_id } = transaction;
+            if id == transaction_id {
+                break user_id;
+            }
+        }
+    };
+
+    let query = GetJwtByUserId { user_id };
+
+    let jwt = query
+        .fetch(runtime.as_ref())
         .await
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", err)).into_response())?;
 

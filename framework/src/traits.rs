@@ -1,5 +1,7 @@
 use async_trait::async_trait;
 
+use crate::TransactionId;
+
 /// Should be implemented on Messages
 pub trait Dispatch<E> {
     type Error: std::error::Error;
@@ -51,7 +53,7 @@ where
     R: Send + Sync,
 {
     type Error: std::error::Error;
-    async fn execute(&self, runtime: &R) -> Result<(), Self::Error>;
+    async fn execute(&self, runtime: &R) -> Result<TransactionId, Self::Error>;
 }
 
 /// Should be implemented on Queries
@@ -72,30 +74,4 @@ where
     R: Send + Sync,
 {
     async fn listen(runtime: &R);
-}
-
-/// Should be implemented on Listeners
-// #[async_trait]
-// pub trait Listen<R>
-// where
-//     R: Send + Sync,
-// {
-//     async fn listen(&self, runtime: &R, ) -> Result<Self::Output, Self::Error>;
-// }
-
-#[async_trait]
-pub trait Framework: Send + Sync + Sized {
-    async fn execute<T>(&self, command: T) -> Result<(), T::Error>
-    where
-        T: Execute<Self> + Send + Sync,
-    {
-        command.execute(self).await
-    }
-
-    async fn fetch<T>(&self, query: T) -> Result<T::Output, T::Error>
-    where
-        T: Fetch<Self> + Send + Sync,
-    {
-        query.fetch(self).await
-    }
 }
