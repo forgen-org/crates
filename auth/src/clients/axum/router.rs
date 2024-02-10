@@ -1,5 +1,5 @@
 use super::api::{login, register};
-use crate::application::*;
+use crate::application::port::*;
 use axum::{routing::post, Router};
 use framework::Framework;
 use std::sync::Arc;
@@ -10,7 +10,7 @@ impl AuthRouter {
     pub fn new<R>(runtime: Arc<R>) -> Router
     where
         R: Framework + 'static,
-        R: AuthStore + JwtPort + UserRepository,
+        R: EventBus + EventStore + JwtPort + UserRepository,
     {
         Router::new()
             .route("/login", post(login::handler))

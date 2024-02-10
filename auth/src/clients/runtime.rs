@@ -3,8 +3,11 @@ use framework::*;
 #[derive(Delegate)]
 pub struct Runtime {
     #[cfg(feature = "mongodb")]
-    #[to(AuthStore, UserRepository)]
+    #[to(EventStore, UserRepository)]
     mongodb_service: crate::services::mongodb::MongoDbService,
+
+    #[to(EventBus)]
+    membus: crate::services::membus::MemBus,
 
     #[to(JwtPort)]
     jwt_service: crate::services::jwt::JwtService,
@@ -15,6 +18,9 @@ impl Runtime {
         Self {
             #[cfg(feature = "mongodb")]
             mongodb_service: crate::services::mongodb::MongoDbService::new().await,
+
+            membus: crate::services::membus::MemBus::new(),
+
             jwt_service: crate::services::jwt::JwtService::new(jwt_secret),
         }
     }

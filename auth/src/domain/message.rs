@@ -1,62 +1,88 @@
 use super::error::Error;
-use super::event::Event;
-use super::state::State;
-use super::{event::Credentials, scalar::*};
+use super::event::{Event, State};
+use super::scalar::*;
+use chrono::Utc;
 use framework::*;
 
 pub enum Message {
-    Register { method: RegisterMethod },
-    LogIn { method: RegisterMethod },
-}
-
-pub enum RegisterMethod {
-    EmailPassword { email: Email, password: Password },
-}
-
-impl From<&RegisterMethod> for Credentials {
-    fn from(method: &RegisterMethod) -> Self {
-        match method {
-            RegisterMethod::EmailPassword { email, password } => Credentials::EmailPassword {
-                email: email.clone(),
-                password_hash: password.into(),
-            },
-        }
-    }
+    Register {
+        email: Email,
+        password: Password,
+    },
+    LogIn {
+        email: Email,
+        password: Password,
+    },
+    #[cfg(feature = "linkedin")]
+    ConnectLinkedIn {
+        email: Email,
+        access_token: String,
+        refresh_token: String,
+    },
 }
 
 impl Dispatch<Event> for Message {
     type Error = Error;
 
     fn dispatch(&self, events: &[Event]) -> Result<Vec<Event>, Self::Error> {
-        let state = State::project(events);
-
         match self {
-            Message::Register { method } => {
-                if state.is_already_registered {
+            Message::Register { email, password } => {
+                if events.is_already_registered().is_some() {
                     Err(Error::AlreadyRegistered)
                 } else {
                     let user_id = UserId::default();
-                    Ok(vec![Event::Registered {
-                        at: chrono::Utc::now(),
-                        user_id,
-                        credentials: method.into(),
-                    }])
+                    Ok(vec![
+                        Event::Registered {
+                            at: Utc::now(),
+                            email: email.clone(),
+                            user_id: user_id.clone(),
+                        },
+                        Event::PasswordChanged {
+                            at: Utc::now(),
+                            password_hash: password.into(),
+                            user_id: user_id.clone(),
+                        },
+                    ])
                 }
             }
-            Message::LogIn { method } => {
-                let RegisterMethod::EmailPassword { password, .. } = method;
-
-                if let Some(user_id) = &state.user_id {
-                    if state.verify(password) {
-                        Ok(vec![Event::LoggedIn {
-                            at: chrono::Utc::now(),
-                            user_id: user_id.clone(),
-                        }])
-                    } else {
-                        Err(Error::InvalidPassword)
-                    }
+            Message::LogIn { email, password } => {
+                if let Some(user_id) = events.is_password_valid(password) {
+                    Ok(vec![Event::LoggedIn {
+                        at: Utc::now(),
+                        user_id: user_id.clone(),
+                    }])
                 } else {
-                    Err(Error::NotRegistered)
+                    Err(Error::InvalidPassword)
+                }
+            }
+            #[cfg(feature = "linkedin")]
+            Message::ConnectLinkedIn {
+                email,
+                access_token,
+                refresh_token,
+            } => {
+                if let Some(user_id) = events.is_already_registered() {
+                    Ok(vec![Event::LinkedInConnected {
+                        access_token: access_token.clone(),
+                        at: Utc::now(),
+                        refresh_token: refresh_token.clone(),
+                        user_id: user_id.clone(),
+                    }])
+                } else {
+                    let user_id = UserId::default();
+                    Ok(vec![
+                        Event::Registered {
+                            at: Utc::now(),
+                            email: email.clone(),
+                            user_id: user_id.clone(),
+                        },
+                        Event::LinkedInConnected {
+                            access_token: access_token.clone(),
+                            at: Utc::now(),
+                            refresh_token: refresh_token.clone(),
+                            user_id: user_id.clone(),
+                        },
+                    ])
                 }
             }
         }

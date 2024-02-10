@@ -1,13 +1,24 @@
+use std::pin::Pin;
+
 use super::projection::User;
 use crate::domain::scalar::*;
 use crate::domain::Event;
 use framework::*;
-use serde::{Deserialize, Serialize};
+use futures::stream::Stream;
+
+pub type EventStream = Pin<Box<dyn Stream<Item = Vec<Event>> + Send>>;
 
 #[async_trait]
 #[delegate]
-pub trait AuthStore {
-    async fn pull_by_email(&self, email: &Email) -> Result<Vec<Event>, UnexpectedError>;
+pub trait EventBus {
+    fn publish(&self, events: Vec<Event>);
+    fn subscribe(&self) -> EventStream;
+}
+
+#[async_trait]
+#[delegate]
+pub trait EventStore {
+    async fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError>;
     async fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<Event>, UnexpectedError>;
     async fn push(&self, events: &[Event]) -> Result<(), UnexpectedError>;
 }
@@ -26,5 +37,15 @@ pub trait JwtPort {
     fn verify(&self, token: &Jwt) -> Result<User, UnexpectedError>;
 }
 
-#[derive(Serialize, Deserialize)]
 pub struct Jwt(pub String);
+
+#[async_trait]
+pub trait LinkedInPort {
+    async fn sign_in(&self, code: &str) -> Result<LinkedInTokens, UnexpectedError>;
+    async fn get_email(&self, tokens: &LinkedInTokens) -> Result<Email, UnexpectedError>;
+}
+
+pub struct LinkedInTokens {
+    pub access_token: String,
+    pub refresh_token: String,
+}

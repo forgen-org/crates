@@ -1,7 +1,7 @@
-use super::event_bus::EventBus;
+// use super::event_bus::EventBus;
 use crate::application::port::*;
+use crate::domain;
 use crate::domain::scalar::*;
-use crate::*;
 use framework::*;
 
 pub struct Register {
@@ -12,22 +12,26 @@ pub struct Register {
 #[async_trait]
 impl<R> Execute<R> for Register
 where
-    R: AuthStore + UserRepository,
+    R: EventBus + EventStore + UserRepository,
     R: Send + Sync,
 {
     type Error = CommandError;
 
     async fn execute(&self, runtime: &R) -> Result<(), CommandError> {
-        let existing_events = AuthStore::pull_by_email(runtime, &self.email).await?;
+        let user_id = EventStore::identify_by_email(runtime, &self.email).await?;
+
+        let existing_events = match user_id {
+            Some(user_id) => EventStore::pull_by_user_id(runtime, &user_id).await?,
+            None => vec![],
+        };
 
         let new_events = existing_events.dispatch(&domain::Message::Register {
-            method: domain::RegisterMethod::EmailPassword {
-                email: self.email.clone(),
-                password: self.password.clone(),
-            },
+            email: self.email.clone(),
+            password: self.password.clone(),
         })?;
 
-        EventBus(new_events).execute(runtime).await?;
+        EventStore::push(runtime, &new_events).await?;
+        EventBus::publish(runtime, new_events);
 
         Ok(())
     }
@@ -41,22 +45,26 @@ pub struct Login {
 #[async_trait]
 impl<R> Execute<R> for Login
 where
-    R: AuthStore + UserRepository,
+    R: EventBus + EventStore,
     R: Send + Sync,
 {
     type Error = CommandError;
 
     async fn execute(&self, runtime: &R) -> Result<(), CommandError> {
-        let existing_events = AuthStore::pull_by_email(runtime, &self.email).await?;
+        let user_id = EventStore::identify_by_email(runtime, &self.email).await?;
+
+        let existing_events = match user_id {
+            Some(user_id) => EventStore::pull_by_user_id(runtime, &user_id).await?,
+            None => vec![],
+        };
 
         let new_events = existing_events.dispatch(&domain::Message::LogIn {
-            method: domain::RegisterMethod::EmailPassword {
-                email: self.email.clone(),
-                password: self.password.clone(),
-            },
+            email: self.email.clone(),
+            password: self.password.clone(),
         })?;
 
-        EventBus(new_events).execute(runtime).await?;
+        EventStore::push(runtime, &new_events).await?;
+        EventBus::publish(runtime, new_events);
 
         Ok(())
     }

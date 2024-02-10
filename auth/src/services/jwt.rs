@@ -1,4 +1,7 @@
-use crate::application::*;
+use crate::application::{
+    port::{Jwt, JwtPort},
+    projection::User,
+};
 use framework::*;
 use hmac::Hmac;
 use jwt::{AlgorithmType, Header, SignWithKey, Token, VerifyWithKey};

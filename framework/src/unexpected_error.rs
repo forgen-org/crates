@@ -1,18 +1,40 @@
 use backtrace::{Backtrace, BacktraceFmt, BacktraceFrame, PrintFmt};
 use std::fmt;
 use std::fmt::Debug;
+use thiserror::Error;
+use tracing::error;
+
+/// Generic Error
+#[derive(Error, Debug)]
+#[error("An unexpected error occurred: {message}")]
+pub struct UnexpectedError {
+    message: String,
+}
+
+impl UnexpectedError {
+    pub fn from<T: std::fmt::Display>(err: T) -> Self {
+        error!(
+            error = %err,
+            trace = ?Trace::new(),
+            "Unexpected Error"
+        );
+        UnexpectedError {
+            message: err.to_string(),
+        }
+    }
+}
 
 const FILTERS: [&str; 3] = [".cargo", "rustc", "framework/src/"];
 
-pub struct ShortBacktrace(Backtrace);
+struct Trace(Backtrace);
 
-impl ShortBacktrace {
+impl Trace {
     pub fn new() -> Self {
         Self(backtrace::Backtrace::new())
     }
 }
 
-impl Debug for ShortBacktrace {
+impl Debug for Trace {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Filter out frames that are not relevant to the user
         let frames = self

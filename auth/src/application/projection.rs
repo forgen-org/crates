@@ -1,4 +1,4 @@
-use crate::domain::{Credentials, Event};
+use crate::domain::Event;
 use framework::*;
 
 #[derive(Default)]
@@ -9,16 +9,9 @@ pub struct User {
 
 impl Project<Event> for User {
     fn apply(&mut self, event: &Event) -> &mut Self {
-        if let Event::Registered {
-            user_id,
-            credentials,
-            ..
-        } = event
-        {
+        if let Event::Registered { email, user_id, .. } = event {
+            self.email = email.to_string();
             self.user_id = user_id.to_string();
-            self.email = match credentials {
-                Credentials::EmailPassword { email, .. } => email.to_string(),
-            };
         }
         self
     }

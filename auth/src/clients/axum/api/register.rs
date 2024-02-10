@@ -1,4 +1,9 @@
-use crate::application::*;
+use crate::application::{
+    command::Register,
+    port::*,
+    query::GetJwtByEmail,
+    scalar::{Email, Password},
+};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -8,14 +13,15 @@ use axum::{
 use framework::*;
 use serde::Deserialize;
 use std::sync::Arc;
+use tokio_retry::{strategy::ExponentialBackoff, Retry};
 
 pub async fn handler<R>(
     State(runtime): State<Arc<R>>,
     Json(payload): Json<Payload>,
-) -> Result<Json<Jwt>, Response>
+) -> Result<String, Response>
 where
     R: Framework,
-    R: AuthStore + JwtPort + UserRepository,
+    R: EventBus + EventStore + JwtPort + UserRepository,
 {
     let command = Register::try_from(payload)?;
     let email = command.email.clone();
@@ -25,12 +31,14 @@ where
         .await
         .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response())?;
 
-    let jwt = runtime
-        .fetch(GetJwtByEmail { email })
-        .await
-        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", err)).into_response())?;
-
-    Ok(Json(jwt))
+    Retry::spawn(ExponentialBackoff::from_millis(100).take(8), || {
+        runtime.fetch(GetJwtByEmail {
+            email: email.clone(),
+        })
+    })
+    .await
+    .map(|jwt| jwt.0)
+    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", err)).into_response())
 }
 
 #[derive(Deserialize)]

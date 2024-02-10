@@ -1,4 +1,9 @@
-use crate::application::*;
+use crate::application::{
+    command::Login,
+    port::*,
+    query::GetJwtByEmail,
+    scalar::{Email, Password},
+};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -12,10 +17,10 @@ use std::sync::Arc;
 pub async fn handler<R>(
     State(runtime): State<Arc<R>>,
     Json(payload): Json<Payload>,
-) -> Result<Json<Jwt>, Response>
+) -> Result<String, Response>
 where
     R: Framework,
-    R: AuthStore + JwtPort + UserRepository,
+    R: EventBus + EventStore + JwtPort + UserRepository,
 {
     let command = Login::try_from(payload)?;
     let email = command.email.clone();
@@ -30,7 +35,7 @@ where
         .await
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", err)).into_response())?;
 
-    Ok(Json(jwt))
+    Ok(jwt.0)
 }
 
 #[derive(Deserialize)]
