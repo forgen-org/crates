@@ -560,13 +560,10 @@ dependencies = [
 name = "framework"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "auto-delegate",
  "backtrace",
- "futures",
  "thiserror",
  "tracing",
- "uuid",
 ]
 
 [[package]]

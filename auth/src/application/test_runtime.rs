@@ -1,7 +1,7 @@
-use super::event::Event;
 use super::port::*;
 use super::projection::User;
 use super::scalar::*;
+use crate::domain;
 use framework::*;
 
 #[derive(Default)]
@@ -13,11 +13,14 @@ impl EventStore for TestRuntime {
         Ok(Some(UserId::default()))
     }
 
-    async fn pull_by_user_id(&self, _user_id: &UserId) -> Result<Vec<Event>, UnexpectedError> {
+    async fn pull_by_user_id(
+        &self,
+        _user_id: &UserId,
+    ) -> Result<Vec<domain::Event>, UnexpectedError> {
         Ok(vec![])
     }
 
-    async fn push(&self, _events: &[Event]) -> Result<(), UnexpectedError> {
+    async fn push(&self, _events: &[domain::Event]) -> Result<(), UnexpectedError> {
         Ok(())
     }
 }

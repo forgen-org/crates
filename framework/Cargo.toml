@@ -6,10 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-trait = "0.1.74"
 auto-delegate = "0.0.9"
 backtrace = "0.3.69"
-futures = "0.3.30"
 thiserror = "1.0.51"
 tracing = "0.1.40"
-uuid = { version = "1.7.0", features = ["v4"] }

@@ -8,7 +8,7 @@ pub struct AuthRouter;
 impl AuthRouter {
     pub fn new<R>(runtime: Arc<R>) -> Router
     where
-        R: EventBus + EventStore + JwtPort + UserRepository + TransactionBus,
+        R: EventBus + EventStore + JwtPort + UserRepository,
         R: Send + Sync + 'static,
     {
         Router::new()

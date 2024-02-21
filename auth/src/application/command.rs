@@ -1,14 +1,15 @@
+use super::event::Event;
 use super::port::*;
+use super::scalar::*;
 use crate::domain;
-use crate::domain::scalar::*;
 use framework::*;
 
 pub struct Register {
     pub email: Email,
     pub password: Password,
+    pub transaction_id: Option<TransactionId>,
 }
 
-#[async_trait]
 impl<R> Execute<R> for Register
 where
     R: EventBus + EventStore + UserRepository,
@@ -16,7 +17,7 @@ where
 {
     type Error = CommandError;
 
-    async fn execute(&self, runtime: &R) -> Result<TransactionId, Self::Error> {
+    async fn execute(&self, runtime: &R) -> Result<(), Self::Error> {
         let user_id = EventStore::identify_by_email(runtime, &self.email).await?;
 
         let existing_events = match user_id {
@@ -30,13 +31,21 @@ where
         })?;
 
         EventStore::push(runtime, &new_events).await?;
-        Ok(EventBus::publish(runtime, new_events))
+        EventBus::publish(
+            runtime,
+            Event::from_domain_events(new_events),
+            self.transaction_id.clone(),
+        )
+        .await;
+
+        Ok(())
     }
 }
 
 pub struct Login {
     pub email: Email,
     pub password: Password,
+    pub transaction_id: Option<TransactionId>,
 }
 
 #[async_trait]
@@ -47,7 +56,7 @@ where
 {
     type Error = CommandError;
 
-    async fn execute(&self, runtime: &R) -> Result<TransactionId, Self::Error> {
+    async fn execute(&self, runtime: &R) -> Result<(), Self::Error> {
         let user_id = EventStore::identify_by_email(runtime, &self.email).await?;
 
         let existing_events = match user_id {
@@ -61,7 +70,13 @@ where
         })?;
 
         EventStore::push(runtime, &new_events).await?;
-        Ok(EventBus::publish(runtime, new_events))
+        EventBus::publish(
+            runtime,
+            Event::from_domain_events(new_events),
+            self.transaction_id.clone(),
+        )
+        .await;
+        Ok(())
     }
 }
 

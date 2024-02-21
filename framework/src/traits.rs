@@ -1,7 +1,3 @@
-use async_trait::async_trait;
-
-use crate::TransactionId;
-
 /// Should be implemented on Messages
 pub trait Dispatch<E> {
     type Error: std::error::Error;
@@ -24,9 +20,11 @@ impl<E> Story<E> for Vec<E> {
     }
 }
 
-/// Should be implemented on Projections
+/// Should be implemented on States and Projections
 pub trait Project<E>: Default {
     fn apply(&mut self, event: &E) -> &mut Self;
+
+    /// Default methods
     fn apply_all(&mut self, events: &[E]) -> &mut Self {
         for event in events {
             self.apply(event);
@@ -47,17 +45,15 @@ pub trait Rewind<E>: Project<E> {
 }
 
 /// Should be implemented on Commands
-#[async_trait]
 pub trait Execute<R>
 where
     R: Send + Sync,
 {
     type Error: std::error::Error;
-    async fn execute(&self, runtime: &R) -> Result<TransactionId, Self::Error>;
+    async fn execute(&self, runtime: &R) -> Result<(), Self::Error>;
 }
 
 /// Should be implemented on Queries
-#[async_trait]
 pub trait Fetch<R>
 where
     R: Send + Sync,
@@ -68,7 +64,6 @@ where
 }
 
 /// Should be implemented on UseCases
-#[async_trait]
 pub trait Listen<R>
 where
     R: Send + Sync,

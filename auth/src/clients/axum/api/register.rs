@@ -5,7 +5,8 @@ use crate::{
         query::GetJwtByUserId,
         scalar::{Email, Password},
     },
-    transaction::Transaction,
+    event::Event,
+    scalar::TransactionId,
 };
 use axum::{
     extract::State,
@@ -14,6 +15,7 @@ use axum::{
     Json,
 };
 use framework::*;
+use futures::StreamExt;
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -22,21 +24,23 @@ pub async fn handler<R>(
     Json(payload): Json<Payload>,
 ) -> Result<String, Response>
 where
-    R: EventBus + EventStore + JwtPort + TransactionBus + UserRepository,
+    R: EventBus + EventStore + JwtPort + UserRepository,
     R: Send + Sync,
 {
-    let command = Register::try_from(payload)?;
+    let mut command = Register::try_from(payload)?;
+    command.transaction_id = Some(TransactionId::default());
 
-    let transaction_id = command
+    command
         .execute(runtime.as_ref())
         .await
         .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response())?;
 
     let user_id = loop {
-        if let Some(transaction) = TransactionBus::subscribe(runtime.as_ref()).next().await {
-            let Transaction::UserProjected { id, user_id } = transaction;
-            if id == transaction_id {
-                break user_id;
+        if let Some((events, transaction_id)) = EventBus::subscribe(runtime.as_ref()).next().await {
+            if let Some(transaction_id) = transaction_id {
+                if let Event::UserProjected(user_id) = &events[0] {
+                    break user_id.clone();
+                }
             }
         }
     };
@@ -66,6 +70,7 @@ impl TryFrom<Payload> for Register {
                 .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid email").into_response())?,
             password: Password::parse(payload.password)
                 .map_err(|err| (StatusCode::BAD_REQUEST, format!("{}", err)).into_response())?,
+            transaction_id: None,
         })
     }
 }

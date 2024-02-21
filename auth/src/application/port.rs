@@ -1,22 +1,20 @@
+use std::pin::Pin;
+
+use super::event::Event;
 use super::projection::User;
-use super::transaction::Transaction;
+use super::scalar::TransactionId;
 use crate::domain;
 use crate::domain::scalar::*;
-use crate::domain::Event;
 use framework::*;
+use futures::Stream;
+
+pub type EventStream = Pin<Box<dyn Stream<Item = (Vec<Event>, Option<TransactionId>)> + Send>>;
 
 #[async_trait]
 #[delegate]
 pub trait EventBus {
-    fn publish(&self, events: Vec<Event>) -> TransactionId;
-    fn subscribe(&self) -> EventStream<Event>;
-}
-
-#[async_trait]
-#[delegate]
-pub trait TransactionBus {
-    fn publish(&self, transaction: Transaction);
-    fn subscribe(&self) -> TransactionStream<Transaction>;
+    async fn publish(&self, events: Vec<Event>, transaction_id: Option<TransactionId>) -> ();
+    fn subscribe(&self) -> EventStream;
 }
 
 #[async_trait]

@@ -1,18 +1,18 @@
+use super::event::Event;
 use super::port::*;
 use super::projection::User;
-use super::transaction::Transaction;
+use crate::domain;
 use crate::domain::scalar::*;
-use crate::domain::Event;
 use framework::*;
 use futures::stream::StreamExt;
 use std::collections::HashMap;
 
-pub struct RecomputeUserProjections(pub Vec<Event>);
+pub struct RecomputeUserProjections(pub Vec<domain::Event>);
 
 impl RecomputeUserProjections {
     async fn reflect<R>(&self, runtime: &R) -> Result<Vec<UserId>, UnexpectedError>
     where
-        R: EventStore + TransactionBus + UserRepository,
+        R: EventStore + UserRepository,
         R: Send + Sync,
     {
         // Caching projections
@@ -21,8 +21,8 @@ impl RecomputeUserProjections {
         // Applying events
         for event in self.0.iter() {
             let user_id = match event {
-                Event::Registered { user_id, .. } => user_id.clone(),
-                Event::LoggedIn { user_id, .. } => user_id.clone(),
+                domain::Event::Registered { user_id, .. } => user_id.clone(),
+                domain::Event::LoggedIn { user_id, .. } => user_id.clone(),
                 _ => continue,
             };
 
@@ -57,21 +57,23 @@ impl RecomputeUserProjections {
 #[async_trait]
 impl<R> Listen<R> for RecomputeUserProjections
 where
-    R: EventBus + EventStore + TransactionBus + UserRepository,
+    R: EventBus + EventStore + UserRepository,
     R: Send + Sync,
 {
     async fn listen(runtime: &R) {
-        while let Some((id, events)) = EventBus::subscribe(runtime).next().await {
-            match RecomputeUserProjections(events).reflect(runtime).await {
+        while let Some((events, transaction_id)) = EventBus::subscribe(runtime).next().await {
+            match RecomputeUserProjections(Event::to_domain_events(events))
+                .reflect(runtime)
+                .await
+            {
                 Ok(user_ids) => {
                     for user_id in user_ids {
-                        TransactionBus::publish(
+                        EventBus::publish(
                             runtime,
-                            Transaction::UserProjected {
-                                id: id.clone(),
-                                user_id,
-                            },
-                        );
+                            vec![Event::UserProjected(user_id)],
+                            transaction_id.clone(),
+                        )
+                        .await;
                     }
                 }
                 Err(err) => {
