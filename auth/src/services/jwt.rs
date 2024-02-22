@@ -41,7 +41,7 @@ impl JwtPort for JwtService {
             .verify_with_key(&self.key)
             .map_err(UnexpectedError::from)?;
         let user = token.claims().clone();
-        Ok(User::try_from(user)?)
+        User::try_from(user)
     }
 }
 

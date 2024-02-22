@@ -1,6 +1,6 @@
 use super::port::*;
 use super::scalar::*;
-use crate::domain::{Auth, Error, Event, Message};
+use crate::domain::{Error, Event, Message, State};
 use crate::signal::Signal;
 use forgen::*;
 
@@ -10,7 +10,7 @@ pub struct Register {
     pub transaction_id: Option<TransactionId>,
 }
 
-impl<R> Command<R> for Register
+impl<R> Commander<R> for Register
 where
     R: SignalPub + EventStore + UserRepository,
 {
@@ -24,7 +24,7 @@ where
             None => vec![],
         };
 
-        let state = Auth::new(&events);
+        let state = State::new(&events);
 
         let new_events = state.send(&Message::Register {
             email: self.email.clone(),
@@ -51,7 +51,7 @@ pub struct Login {
     pub transaction_id: Option<TransactionId>,
 }
 
-impl<R> Command<R> for Login
+impl<R> Commander<R> for Login
 where
     R: SignalPub + EventStore,
 {
@@ -63,7 +63,7 @@ where
 
         let events = EventStore::pull_by_user_id(runtime, &user_id)?;
 
-        let state = Auth::new(&events);
+        let state = State::new(&events);
 
         let new_events = state.send(&Message::LogIn {
             email: self.email.clone(),
@@ -89,7 +89,7 @@ pub struct ProjectUser {
     pub user_id: UserId,
 }
 
-impl<R> Command<R> for ProjectUser
+impl<R> Commander<R> for ProjectUser
 where
     R: SignalPub + UserRepository,
 {
@@ -97,7 +97,7 @@ where
 
     fn execute(&self, runtime: &R) -> Result<(), Self::Error> {
         let mut user = UserRepository::find_by_user_id(runtime, &self.user_id)?.unwrap_or_default();
-        user.apply_all(&self.events);
+        user.extend(&self.events);
         UserRepository::save(runtime, &user)?;
         SignalPub::publish(
             runtime,

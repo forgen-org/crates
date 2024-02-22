@@ -4,16 +4,16 @@ use super::error::Error;
 use super::event::Event;
 use super::message::Message;
 use super::scalar::{Email, PasswordHash};
-use forgen::State;
+use forgen::*;
 
 #[derive(Default)]
-pub struct Auth {
+pub struct State {
     pub user_id: UserId,
     pub email: Option<Email>,
     pub password_hash: Option<PasswordHash>,
 }
 
-impl State for Auth {
+impl Messenger for State {
     type Error = Error;
     type Event = Event;
     type Message = Message;
@@ -81,8 +81,12 @@ impl State for Auth {
             }
         }
     }
+}
 
-    fn apply(&mut self, event: &Event) -> &mut Self {
+impl Projector for State {
+    type Event = Event;
+
+    fn push(&mut self, event: &Self::Event) -> &mut Self {
         match event {
             Event::Registered { email, user_id } => {
                 self.email = Some(email.clone());

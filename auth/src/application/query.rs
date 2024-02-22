@@ -6,7 +6,7 @@ pub struct GetJwtByUserId {
     pub user_id: UserId,
 }
 
-impl<R> Query<R> for GetJwtByUserId
+impl<R> Querier<R> for GetJwtByUserId
 where
     R: JwtPort + UserRepository,
     R: Send + Sync,

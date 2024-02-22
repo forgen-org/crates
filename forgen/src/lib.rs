@@ -1,4 +1,3 @@
-mod framework;
 mod traits;
 mod unexpected_error;
 
@@ -6,7 +5,6 @@ pub extern crate auto_delegate;
 pub extern crate thiserror;
 
 pub use auto_delegate::*;
-pub use framework::*;
 pub use thiserror::*;
 pub use tracing::{debug, error, info, trace, warn};
 pub use traits::*;

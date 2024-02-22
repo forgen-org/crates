@@ -1,53 +1,45 @@
-pub trait State: Default {
+pub trait Messenger: Default {
     type Message;
     type Event;
     type Error: std::error::Error;
 
-    fn apply(&mut self, event: &Self::Event) -> &mut Self;
-
     fn send(&self, message: &Self::Message) -> Result<Vec<Self::Event>, Self::Error>;
+}
+
+pub trait Projector: Default {
+    type Event;
+
+    fn push(&mut self, event: &Self::Event) -> &mut Self;
+
+    fn extend(&mut self, events: &[Self::Event]) -> &mut Self {
+        for event in events {
+            self.push(event);
+        }
+        self
+    }
 
     fn new(events: &[Self::Event]) -> Self {
         let mut value = Self::default();
-        for event in events {
-            value.apply(event);
-        }
+        value.extend(events);
         value
     }
 }
 
-pub trait Projection: Default {
-    type Event;
-
-    fn apply(&mut self, event: &Self::Event) -> &mut Self;
-
-    fn apply_all(&mut self, events: &[Self::Event]) -> &mut Self {
-        for event in events {
-            self.apply(event);
-        }
-        self
-    }
-}
-
-pub trait Snapshot: Projection {
+pub trait Snapshoter: Projector {
     type Error: std::error::Error;
 
     fn rewind(&self) -> Result<Vec<Self::Event>, Self::Error>;
 }
 
-pub trait Command<R> {
+pub trait Commander<R> {
     type Error: std::error::Error;
 
     fn execute(&self, runtime: &R) -> Result<(), Self::Error>;
 }
 
-pub trait Query<R> {
+pub trait Querier<R> {
     type Output;
     type Error: std::error::Error;
 
     fn fetch(&self, runtime: &R) -> Result<Self::Output, Self::Error>;
-}
-
-pub trait Listener<R> {
-    fn listen(&self, runtime: &R);
 }

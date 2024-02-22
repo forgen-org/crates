@@ -10,16 +10,13 @@ pub struct User {
     pub user_id: Option<UserId>,
 }
 
-impl Projection for User {
+impl Projector for User {
     type Event = Event;
 
-    fn apply(&mut self, event: &Event) -> &mut Self {
-        match event {
-            Event::Registered { email, user_id } => {
-                self.email = Some(email.clone());
-                self.user_id = Some(user_id.clone());
-            }
-            _ => {}
+    fn push(&mut self, event: &Event) -> &mut Self {
+        if let Event::Registered { email, user_id } = event {
+            self.email = Some(email.clone());
+            self.user_id = Some(user_id.clone());
         }
         self
     }
