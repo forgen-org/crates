@@ -5,7 +5,7 @@ use crate::{
         query::GetJwtByUserId,
         scalar::{Email, Password},
     },
-    clients::axum::listener::wait_for_user,
+    clients::axum::{listener::wait_for_user, runtime::SignalSub},
     scalar::TransactionId,
 };
 use axum::{
@@ -23,7 +23,7 @@ pub async fn handler<R>(
     Json(payload): Json<Payload>,
 ) -> Result<String, Response>
 where
-    R: SignalBus + EventStore + JwtPort + UserRepository,
+    R: EventStore + JwtPort + SignalPub + SignalSub + UserRepository,
     R: Send + Sync,
 {
     let mut command = Login::try_from(payload)?;

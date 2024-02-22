@@ -1,19 +1,40 @@
-use super::traits::*;
+// use super::traits::*;
 
-pub struct Framework<R>(R);
+// // pub struct Framework<R>(R);
 
-impl<R> Framework<R> {
-    pub fn execute<C>(&self, command: &C) -> Result<(), C::Error>
-    where
-        C: Command<R>,
-    {
-        command.execute(&self.0)
-    }
+// pub trait Framework
+// where
+//     Self: Sized,
+// {
+//     fn execute<C>(&self, command: &C) -> Result<(), C::Error>
+//     where
+//         C: Command<Self>,
+//     {
+//         command.execute(self)
+//     }
 
-    pub fn fetch<Q>(&self, query: &Q) -> Result<Q::Output, Q::Error>
-    where
-        Q: Query<R>,
-    {
-        query.fetch(&self.0)
-    }
-}
+//     fn fetch<Q>(&self, query: &Q) -> Result<Q::Output, Q::Error>
+//     where
+//         Q: Query<Self>,
+//     {
+//         query.fetch(self)
+//     }
+// }
+
+// impl<R> Framework for R {}
+
+// // impl<R> Framework<R> {
+// //     pub fn execute<C>(&self, command: &C) -> Result<(), C::Error>
+// //     where
+// //         C: Command<R>,
+// //     {
+// //         command.execute(&self.0)
+// //     }
+
+// //     pub fn fetch<Q>(&self, query: &Q) -> Result<Q::Output, Q::Error>
+// //     where
+// //         Q: Query<R>,
+// //     {
+// //         query.fetch(&self.0)
+// //     }
+// // }

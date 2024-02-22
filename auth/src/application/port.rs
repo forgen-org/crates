@@ -18,11 +18,8 @@ pub trait UserRepository {
 }
 
 #[delegate]
-pub trait SignalBus {
+pub trait SignalPub {
     fn publish(&self, signal: Signal);
-    fn subscribe<F>(&self, handler: F)
-    where
-        F: Fn(Signal) + Send + 'static;
 }
 
 #[delegate]

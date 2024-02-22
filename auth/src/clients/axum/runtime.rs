@@ -1,4 +1,6 @@
+use crate::signal::Signal;
 use forgen::*;
+use tokio::sync::broadcast::Receiver;
 
 #[derive(Delegate)]
 pub struct Runtime {
@@ -6,8 +8,8 @@ pub struct Runtime {
     #[to(EventStore, UserRepository)]
     mongodb_service: crate::services::mongodb::MongoDbService,
 
-    #[to(SignalBus, TransactionBus)]
-    membus: crate::services::membus::MemBus,
+    #[to(SignalPub, TransactionBus)]
+    tokiobus: crate::services::tokiobus::TokioBus,
 
     #[to(JwtPort)]
     jwt_service: crate::services::jwt::JwtService,
@@ -19,9 +21,20 @@ impl Runtime {
             #[cfg(feature = "mongodb")]
             mongodb_service: crate::services::mongodb::MongoDbService::new(),
 
-            membus: crate::services::membus::MemBus::default(),
+            #[cfg(feature = "axum")]
+            tokiobus: crate::services::tokiobus::TokioBus::default(),
 
             jwt_service: crate::services::jwt::JwtService::new(jwt_secret),
         }
+    }
+}
+
+pub trait SignalSub {
+    fn subscribe(&self) -> Receiver<Signal>;
+}
+
+impl SignalSub for Runtime {
+    fn subscribe(&self) -> Receiver<Signal> {
+        self.tokiobus.subscribe()
     }
 }

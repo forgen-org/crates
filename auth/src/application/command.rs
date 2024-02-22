@@ -1,7 +1,7 @@
 use super::port::*;
 use super::scalar::*;
-use crate::domain::{Auth, Error, Message};
-use crate::signal::{Metadata, Signal};
+use crate::domain::{Auth, Error, Event, Message};
+use crate::signal::Signal;
 use forgen::*;
 
 pub struct Register {
@@ -12,7 +12,7 @@ pub struct Register {
 
 impl<R> Command<R> for Register
 where
-    R: SignalBus + EventStore + UserRepository,
+    R: SignalPub + EventStore + UserRepository,
 {
     type Error = CommandError;
 
@@ -32,9 +32,13 @@ where
         })?;
 
         EventStore::push(runtime, &new_events)?;
-        SignalBus::publish(
+        SignalPub::publish(
             runtime,
-            Signal::EventsEmitted(new_events, Metadata::default().with_user_id(state.user_id)),
+            Signal::EventsEmitted {
+                events: new_events,
+                user_id: Some(state.user_id.clone()),
+                transaction_id: self.transaction_id.clone(),
+            },
         );
 
         Ok(())
@@ -49,7 +53,7 @@ pub struct Login {
 
 impl<R> Command<R> for Login
 where
-    R: SignalBus + EventStore,
+    R: SignalPub + EventStore,
 {
     type Error = CommandError;
 
@@ -67,14 +71,40 @@ where
         })?;
 
         EventStore::push(runtime, &new_events)?;
-        SignalBus::publish(
+        SignalPub::publish(
             runtime,
-            Signal::EventsEmitted(
-                new_events,
-                Metadata::default()
-                    .with_user_id(user_id)
-                    .with_transaction_id(self.transaction_id.clone().unwrap()),
-            ),
+            Signal::EventsEmitted {
+                events: new_events,
+                user_id: Some(state.user_id.clone()),
+                transaction_id: self.transaction_id.clone(),
+            },
+        );
+        Ok(())
+    }
+}
+
+pub struct ProjectUser {
+    pub events: Vec<Event>,
+    pub transaction_id: Option<TransactionId>,
+    pub user_id: UserId,
+}
+
+impl<R> Command<R> for ProjectUser
+where
+    R: SignalPub + UserRepository,
+{
+    type Error = UnexpectedError;
+
+    fn execute(&self, runtime: &R) -> Result<(), Self::Error> {
+        let mut user = UserRepository::find_by_user_id(runtime, &self.user_id)?.unwrap_or_default();
+        user.apply_all(&self.events);
+        UserRepository::save(runtime, &user)?;
+        SignalPub::publish(
+            runtime,
+            Signal::UserProjected {
+                transaction_id: self.transaction_id.clone(),
+                user_id: self.user_id.clone(),
+            },
         );
         Ok(())
     }
