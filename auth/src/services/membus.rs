@@ -1,38 +1,39 @@
-use crate::application::{event::Event, port::EventBus};
-use crate::port::EventStream;
-use crate::scalar::TransactionId;
-use futures::channel::mpsc::{self, UnboundedSender};
-use futures::stream::StreamExt;
+use crate::application::{port::SignalBus, signal::Signal};
+use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 
 pub struct MemBus {
-    event_subscribers: Arc<Mutex<Vec<UnboundedSender<(Vec<Event>, Option<TransactionId>)>>>>,
+    senders: Arc<Mutex<Vec<Sender<Signal>>>>,
 }
 
 impl Default for MemBus {
     fn default() -> Self {
         MemBus {
-            event_subscribers: Arc::new(Mutex::new(Vec::new())),
+            senders: Arc::new(Mutex::new(Vec::new())),
         }
     }
 }
 
-impl EventBus for MemBus {
-    async fn publish(&self, events: Vec<Event>, transaction_id: Option<TransactionId>) -> () {
-        let subscribers = self.event_subscribers.lock().unwrap();
-        for sub in subscribers.iter() {
-            // Here, we clone the event for each subscriber. This is a simple approach but might not be the most efficient for complex event types or a large number of subscribers.
-            let _ = sub.unbounded_send((events.clone(), transaction_id.clone()));
-            // Ignore send errors
+impl SignalBus for MemBus {
+    fn publish(&self, signal: Signal) -> () {
+        let senders = self.senders.lock().unwrap();
+        for sender in senders.iter() {
+            sender.send(signal.clone()).unwrap();
         }
     }
 
-    fn subscribe(&self) -> EventStream {
-        let (tx, rx) = mpsc::unbounded();
-        {
-            let mut subscribers = self.event_subscribers.lock().unwrap();
-            subscribers.push(tx);
-        }
-        rx.boxed()
+    fn subscribe<F>(&self, handler: F)
+    where
+        F: Fn(Signal) + Send + 'static,
+    {
+        let (sender, receiver) = channel();
+        let mut senders = self.senders.lock().unwrap();
+        senders.push(sender);
+        drop(senders);
+
+        std::thread::spawn(move || loop {
+            let event = receiver.recv().unwrap();
+            handler(event);
+        });
     }
 }

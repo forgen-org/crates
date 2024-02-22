@@ -3,20 +3,18 @@ use super::MongoDbService;
 use crate::application::event::Event;
 use crate::application::port::*;
 use crate::application::scalar::*;
-use framework::*;
+use forgen::*;
 use futures::TryStreamExt;
 use mongodb::bson::doc;
 
-#[async_trait]
 impl EventStore for MongoDbService {
-    async fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError> {
+    fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError> {
         let event_option = self
             .event
             .find_one(
                 doc! {"_tag": "Registered", "email": email.to_string()},
                 None,
             )
-            .await
             .map_err(UnexpectedError::from)?;
 
         match event_option {
@@ -34,13 +32,11 @@ impl EventStore for MongoDbService {
         }
     }
 
-    async fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<Event>, UnexpectedError> {
+    fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<Event>, UnexpectedError> {
         self.event
             .find(doc! {"user_id": user_id.to_string()}, None)
-            .await
             .map_err(UnexpectedError::from)?
             .try_collect()
-            .await
             .map_err(UnexpectedError::from)
             .and_then(|events: Vec<EventDto>| {
                 events
@@ -50,10 +46,9 @@ impl EventStore for MongoDbService {
             })
     }
 
-    async fn push(&self, events: &[Event]) -> Result<(), UnexpectedError> {
+    fn push(&self, events: &[Event]) -> Result<(), UnexpectedError> {
         self.event
             .insert_many(events.iter().map(EventDto::from).collect::<Vec<_>>(), None)
-            .await
             .map(|_| ())
             .map_err(UnexpectedError::from)
     }

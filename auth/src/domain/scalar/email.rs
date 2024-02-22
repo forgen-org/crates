@@ -1,4 +1,4 @@
-use framework::*;
+use forgen::*;
 use regex::Regex;
 
 #[derive(Clone, PartialEq)]

@@ -2,7 +2,7 @@ use crate::application::{
     port::{Jwt, JwtPort},
     projection::User,
 };
-use framework::*;
+use forgen::UnexpectedError;
 use hmac::Hmac;
 use jwt::{AlgorithmType, Header, SignWithKey, Token, VerifyWithKey};
 use serde::{Deserialize, Serialize};
@@ -44,15 +44,11 @@ impl JwtPort for JwtService {
 #[derive(Clone, Serialize, Deserialize)]
 struct UserDto {
     email: String,
-    user_id: String,
 }
 
 impl From<UserDto> for User {
     fn from(dto: UserDto) -> Self {
-        Self {
-            email: dto.email,
-            user_id: dto.user_id,
-        }
+        Self { email: dto.email }
     }
 }
 
@@ -60,7 +56,6 @@ impl From<&User> for UserDto {
     fn from(projection: &User) -> Self {
         Self {
             email: projection.email.clone(),
-            user_id: projection.user_id.clone(),
         }
     }
 }

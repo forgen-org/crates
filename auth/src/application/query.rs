@@ -1,13 +1,12 @@
 use super::port::*;
 use crate::domain::scalar::*;
-use framework::*;
+use forgen::*;
 
 pub struct GetJwtByUserId {
     pub user_id: UserId,
 }
 
-#[async_trait]
-impl<R> Fetch<R> for GetJwtByUserId
+impl<R> Query<R> for GetJwtByUserId
 where
     R: JwtPort + UserRepository,
     R: Send + Sync,
@@ -15,9 +14,8 @@ where
     type Output = Jwt;
     type Error = GetJwtByEmailError;
 
-    async fn fetch(&self, runtime: &R) -> Result<Jwt, GetJwtByEmailError> {
-        let user = UserRepository::find_by_user_id(runtime, &self.user_id)
-            .await?
+    fn fetch(&self, runtime: &R) -> Result<Jwt, GetJwtByEmailError> {
+        let user = UserRepository::find_by_user_id(runtime, &self.user_id)?
             .ok_or(GetJwtByEmailError::UserNotFound)?;
         let jwt = JwtPort::sign(runtime, &user)?;
         Ok(jwt)

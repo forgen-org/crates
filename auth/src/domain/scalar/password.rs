@@ -1,4 +1,4 @@
-use framework::*;
+use forgen::*;
 
 #[derive(Clone)]
 pub struct Password(String);

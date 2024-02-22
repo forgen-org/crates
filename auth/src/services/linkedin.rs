@@ -1,5 +1,5 @@
 // use crate::application::{Email, LinkedInPort, LinkedInTokens};
-// use framework::*;
+// use forgen::*;
 // use reqwest::Client;
 // use serde::Deserialize;
 // use std::collections::HashMap;
@@ -11,9 +11,9 @@
 //     redirect_uri: String,
 // }
 
-// #[async_trait]
+//
 // impl LinkedInPort for LinkedInService {
-//     async fn sign_in(&self, code: &str) -> Result<LinkedInTokens, UnexpectedError> {
+//     fn sign_in(&self, code: &str) -> Result<LinkedInTokens, UnexpectedError> {
 //         let client_secret = self
 //             .client_secret
 //             .as_ref()
@@ -34,24 +34,24 @@
 //             .header("Content-Type", "application/x-www-form-urlencoded")
 //             .body(body)
 //             .send()
-//             .await
+//
 //             .unwrap()
 //             .json::<TokensResponse>()
-//             .await
+//
 //             .map(LinkedInTokens::from)
 //             .map_err(UnexpectedError::from)
 //     }
 
-//     async fn get_email(&self, tokens: &LinkedInTokens) -> Result<Email, UnexpectedError> {
+//     fn get_email(&self, tokens: &LinkedInTokens) -> Result<Email, UnexpectedError> {
 //         self
 //             .client
 //             .get("https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))")
 //             .header("Authorization", format!("Bearer {}", tokens.access_token))
 //             .send()
-//             .await
+//
 //             .unwrap()
 //             .json::<EmailResponse>()
-//             .await
+//
 //             .map_err(UnexpectedError::from)
 //             .and_then(Email::try_from)
 //     }

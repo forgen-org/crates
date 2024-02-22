@@ -1,17 +1,20 @@
 use crate::domain::Event;
-use framework::*;
+use forgen::*;
 
 #[derive(Default)]
 pub struct User {
     pub email: String,
-    pub user_id: String,
 }
 
-impl Project<Event> for User {
+impl Projection for User {
+    type Event = Event;
+
     fn apply(&mut self, event: &Event) -> &mut Self {
-        if let Event::Registered { email, user_id, .. } = event {
-            self.email = email.to_string();
-            self.user_id = user_id.to_string();
+        match event {
+            Event::Registered { email, .. } => {
+                self.email = email.to_string();
+            }
+            _ => {}
         }
         self
     }

@@ -1,38 +1,28 @@
-use std::pin::Pin;
-
-use super::event::Event;
 use super::projection::User;
-use super::scalar::TransactionId;
+use super::signal::Signal;
 use crate::domain;
 use crate::domain::scalar::*;
-use framework::*;
-use futures::Stream;
+use forgen::*;
 
-pub type EventStream = Pin<Box<dyn Stream<Item = (Vec<Event>, Option<TransactionId>)> + Send>>;
-
-#[async_trait]
-#[delegate]
-pub trait EventBus {
-    async fn publish(&self, events: Vec<Event>, transaction_id: Option<TransactionId>) -> ();
-    fn subscribe(&self) -> EventStream;
-}
-
-#[async_trait]
 #[delegate]
 pub trait EventStore {
-    async fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError>;
-    async fn pull_by_user_id(
-        &self,
-        user_id: &UserId,
-    ) -> Result<Vec<domain::Event>, UnexpectedError>;
-    async fn push(&self, events: &[domain::Event]) -> Result<(), UnexpectedError>;
+    fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError>;
+    fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<domain::Event>, UnexpectedError>;
+    fn push(&self, user_id: &UserId, events: &[domain::Event]) -> Result<(), UnexpectedError>;
 }
 
-#[async_trait]
 #[delegate]
 pub trait UserRepository {
-    async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError>;
-    async fn save(&self, projection: &User) -> Result<(), UnexpectedError>;
+    fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError>;
+    fn save(&self, user_id: &UserId, projection: &User) -> Result<(), UnexpectedError>;
+}
+
+#[delegate]
+pub trait SignalBus {
+    fn publish(&self, signal: Signal);
+    fn subscribe<F>(&self, handler: F)
+    where
+        F: Fn(Signal) + Send + 'static;
 }
 
 #[delegate]
@@ -43,10 +33,9 @@ pub trait JwtPort {
 
 pub struct Jwt(pub String);
 
-#[async_trait]
 pub trait LinkedInPort {
-    async fn sign_in(&self, code: &str) -> Result<LinkedInTokens, UnexpectedError>;
-    async fn get_email(&self, tokens: &LinkedInTokens) -> Result<Email, UnexpectedError>;
+    fn sign_in(&self, code: &str) -> Result<LinkedInTokens, UnexpectedError>;
+    fn get_email(&self, tokens: &LinkedInTokens) -> Result<Email, UnexpectedError>;
 }
 
 pub struct LinkedInTokens {

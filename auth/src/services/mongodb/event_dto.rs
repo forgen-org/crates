@@ -3,7 +3,7 @@ use crate::application::{
     scalar::{Email, PasswordHash, UserId},
 };
 use chrono::{DateTime, Utc};
-use framework::*;
+use forgen::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

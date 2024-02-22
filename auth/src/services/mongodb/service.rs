@@ -8,10 +8,8 @@ pub struct MongoDbService {
 }
 
 impl MongoDbService {
-    pub async fn new() -> Self {
-        let client_options = ClientOptions::parse("mongodb://localhost:27017")
-            .await
-            .unwrap();
+    pub fn new() -> Self {
+        let client_options = ClientOptions::parse("mongodb://localhost:27017").unwrap();
         let client = Client::with_options(client_options).unwrap();
         let db = client.database("auth");
 

@@ -4,6 +4,6 @@ resolver = "2"
 
 members = [ 
     "auth",
-    "framework", 
+    "forgen", 
     "lab",
 ]

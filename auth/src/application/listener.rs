@@ -1,84 +1,23 @@
-use super::event::Event;
 use super::port::*;
-use super::projection::User;
-use crate::domain;
-use crate::domain::scalar::*;
-use framework::*;
-use futures::stream::StreamExt;
-use std::collections::HashMap;
+use super::signal::Signal;
+use forgen::*;
 
-pub struct RecomputeUserProjections(pub Vec<domain::Event>);
+pub struct RecomputeUser;
 
-impl RecomputeUserProjections {
-    async fn reflect<R>(&self, runtime: &R) -> Result<Vec<UserId>, UnexpectedError>
-    where
-        R: EventStore + UserRepository,
-        R: Send + Sync,
-    {
-        // Caching projections
-        let mut users = HashMap::<UserId, User>::new();
-
-        // Applying events
-        for event in self.0.iter() {
-            let user_id = match event {
-                domain::Event::Registered { user_id, .. } => user_id.clone(),
-                domain::Event::LoggedIn { user_id, .. } => user_id.clone(),
-                _ => continue,
-            };
-
-            let user = match users.get_mut(&user_id) {
-                Some(user) => user,
-                None => match UserRepository::find_by_user_id(runtime, &user_id).await? {
-                    Some(user) => {
-                        users.insert(user_id.clone(), user);
-                        users.get_mut(&user_id).unwrap()
-                    }
-                    None => {
-                        let events = EventStore::pull_by_user_id(runtime, &user_id).await?;
-                        let user = User::project(&events);
-                        users.insert(user_id.clone(), user);
-                        users.get_mut(&user_id).unwrap()
-                    }
-                },
-            };
-
-            user.apply(&event);
-        }
-
-        // Save projections
-        for user in users.values() {
-            UserRepository::save(runtime, user).await?;
-        }
-
-        Ok(users.keys().cloned().collect())
-    }
-}
-
-#[async_trait]
-impl<R> Listen<R> for RecomputeUserProjections
+impl<R> Listener<R> for RecomputeUser
 where
-    R: EventBus + EventStore + UserRepository,
-    R: Send + Sync,
+    R: EventStore + UserRepository,
 {
-    async fn listen(runtime: &R) {
-        while let Some((events, transaction_id)) = EventBus::subscribe(runtime).next().await {
-            match RecomputeUserProjections(Event::to_domain_events(events))
-                .reflect(runtime)
-                .await
-            {
-                Ok(user_ids) => {
-                    for user_id in user_ids {
-                        EventBus::publish(
-                            runtime,
-                            vec![Event::UserProjected(user_id)],
-                            transaction_id.clone(),
-                        )
-                        .await;
-                    }
-                }
-                Err(err) => {
-                    error!("Failed to recompute user projections: {}", err);
-                }
+    type Signal = Signal;
+
+    fn listen(&self, runtime: &R, signal: &Self::Signal) {
+        if let Signal::EventsEmitted(events, metadata) = &signal {
+            if let Some(user_id) = &metadata.user_id {
+                let mut user = UserRepository::find_by_user_id(runtime, user_id)
+                    .unwrap()
+                    .unwrap_or_default();
+                user.apply_all(events);
+                UserRepository::save(runtime, user_id, &user).unwrap();
             }
         }
     }
