@@ -1,3 +1,5 @@
+use crate::scalar::UserId;
+
 use super::error::Error;
 use super::event::Event;
 use super::message::Message;
@@ -6,6 +8,7 @@ use forgen::State;
 
 #[derive(Default)]
 pub struct Auth {
+    pub user_id: UserId,
     pub email: Option<Email>,
     pub password_hash: Option<PasswordHash>,
 }
@@ -24,9 +27,11 @@ impl State for Auth {
                     Ok(vec![
                         Event::Registered {
                             email: email.clone(),
+                            user_id: self.user_id.clone(),
                         },
                         Event::PasswordChanged {
                             password_hash: password.into(),
+                            user_id: self.user_id.clone(),
                         },
                     ])
                 }
@@ -38,7 +43,9 @@ impl State for Auth {
                     .map(|hash| hash.verify(password))
                     .unwrap_or(false)
                 {
-                    Ok(vec![Event::LoggedIn])
+                    Ok(vec![Event::LoggedIn {
+                        user_id: self.user_id.clone(),
+                    }])
                 } else {
                     Err(Error::InvalidPassword)
                 }
@@ -56,16 +63,19 @@ impl State for Auth {
                     Ok(vec![
                         Event::Registered {
                             email: email.clone(),
+                            user_id: self.user_id.clone(),
                         },
                         Event::LinkedInConnected {
                             access_token: access_token.clone(),
                             refresh_token: refresh_token.clone(),
+                            user_id: self.user_id.clone(),
                         },
                     ])
                 } else {
                     Ok(vec![Event::LinkedInConnected {
                         access_token: access_token.clone(),
                         refresh_token: refresh_token.clone(),
+                        user_id: self.user_id.clone(),
                     }])
                 }
             }
@@ -74,8 +84,9 @@ impl State for Auth {
 
     fn apply(&mut self, event: &Event) -> &mut Self {
         match event {
-            Event::Registered { email } => {
+            Event::Registered { email, user_id } => {
                 self.email = Some(email.clone());
+                self.user_id = user_id.clone();
             }
             Event::PasswordChanged { password_hash, .. } => {
                 self.password_hash = Some(password_hash.clone());

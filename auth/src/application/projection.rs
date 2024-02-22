@@ -1,9 +1,13 @@
-use crate::domain::Event;
+use crate::{
+    domain::Event,
+    scalar::{Email, UserId},
+};
 use forgen::*;
 
 #[derive(Default)]
 pub struct User {
-    pub email: String,
+    pub email: Option<Email>,
+    pub user_id: Option<UserId>,
 }
 
 impl Projection for User {
@@ -11,8 +15,9 @@ impl Projection for User {
 
     fn apply(&mut self, event: &Event) -> &mut Self {
         match event {
-            Event::Registered { email, .. } => {
-                self.email = email.to_string();
+            Event::Registered { email, user_id } => {
+                self.email = Some(email.clone());
+                self.user_id = Some(user_id.clone());
             }
             _ => {}
         }

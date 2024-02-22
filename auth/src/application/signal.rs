@@ -1,5 +1,4 @@
-use uuid::Uuid;
-
+use super::scalar::TransactionId;
 use crate::domain::scalar::UserId;
 use crate::domain::Event;
 
@@ -9,15 +8,15 @@ pub enum Signal {
     UserProjected(Metadata),
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Metadata {
     pub at: chrono::DateTime<chrono::Utc>,
-    pub transaction_id: Option<Uuid>,
+    pub transaction_id: Option<TransactionId>,
     pub user_id: Option<UserId>,
 }
 
 impl Metadata {
-    pub fn new() -> Self {
+    pub fn default() -> Self {
         Self {
             at: chrono::Utc::now(),
             transaction_id: None,
@@ -25,7 +24,7 @@ impl Metadata {
         }
     }
 
-    pub fn with_transaction_id(mut self, transaction_id: Uuid) -> Self {
+    pub fn with_transaction_id(mut self, transaction_id: TransactionId) -> Self {
         self.transaction_id = Some(transaction_id);
         self
     }

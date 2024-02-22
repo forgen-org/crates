@@ -31,12 +31,10 @@ where
             password: self.password.clone(),
         })?;
 
-        let user_id = UserId::default();
-
-        EventStore::push(runtime, &user_id, &new_events)?;
+        EventStore::push(runtime, &new_events)?;
         SignalBus::publish(
             runtime,
-            Signal::EventsEmitted(new_events, Metadata::new().with_user_id(user_id)),
+            Signal::EventsEmitted(new_events, Metadata::default().with_user_id(state.user_id)),
         );
 
         Ok(())
@@ -68,10 +66,15 @@ where
             password: self.password.clone(),
         })?;
 
-        EventStore::push(runtime, &user_id, &new_events)?;
+        EventStore::push(runtime, &new_events)?;
         SignalBus::publish(
             runtime,
-            Signal::EventsEmitted(new_events, Metadata::new().with_user_id(user_id)),
+            Signal::EventsEmitted(
+                new_events,
+                Metadata::default()
+                    .with_user_id(user_id)
+                    .with_transaction_id(self.transaction_id.clone().unwrap()),
+            ),
         );
         Ok(())
     }

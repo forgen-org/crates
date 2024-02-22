@@ -49,7 +49,5 @@ pub trait Query<R> {
 }
 
 pub trait Listener<R> {
-    type Signal;
-
-    fn listen(&self, runtime: &R, signal: &Self::Signal);
+    fn listen(&self, runtime: &R);
 }

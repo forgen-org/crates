@@ -1,11 +1,11 @@
 use crate::{
     application::{
         command::Login,
-        event::Event,
         port::*,
         query::GetJwtByUserId,
         scalar::{Email, Password},
     },
+    clients::axum::listener::wait_for_user,
     scalar::TransactionId,
 };
 use axum::{
@@ -14,8 +14,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use framework::*;
-use futures::StreamExt;
+use forgen::*;
 use serde::Deserialize;
 use std::sync::Arc;
 
@@ -24,7 +23,7 @@ pub async fn handler<R>(
     Json(payload): Json<Payload>,
 ) -> Result<String, Response>
 where
-    R: EventBus + EventStore + JwtPort + UserRepository,
+    R: SignalBus + EventStore + JwtPort + UserRepository,
     R: Send + Sync,
 {
     let mut command = Login::try_from(payload)?;
@@ -32,24 +31,14 @@ where
 
     command
         .execute(runtime.as_ref())
-        .await
         .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response())?;
 
-    let user_id = loop {
-        if let Some((events, transaction_id)) = EventBus::subscribe(runtime.as_ref()).next().await {
-            if let Some(transaction_id) = transaction_id {
-                if let Event::UserProjected(user_id) = &events[0] {
-                    break user_id.clone();
-                }
-            }
-        }
-    };
+    let user_id = wait_for_user(runtime.as_ref(), command.transaction_id).await;
 
     let query = GetJwtByUserId { user_id };
 
     let jwt = query
         .fetch(runtime.as_ref())
-        .await
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", err)).into_response())?;
 
     Ok(jwt.0)

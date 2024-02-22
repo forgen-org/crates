@@ -1,4 +1,4 @@
-use framework::*;
+use forgen::*;
 
 #[derive(Delegate)]
 pub struct Runtime {
@@ -6,7 +6,7 @@ pub struct Runtime {
     #[to(EventStore, UserRepository)]
     mongodb_service: crate::services::mongodb::MongoDbService,
 
-    #[to(EventBus, TransactionBus)]
+    #[to(SignalBus, TransactionBus)]
     membus: crate::services::membus::MemBus,
 
     #[to(JwtPort)]
@@ -17,7 +17,7 @@ impl Runtime {
     pub async fn new(jwt_secret: &str) -> Self {
         Self {
             #[cfg(feature = "mongodb")]
-            mongodb_service: crate::services::mongodb::MongoDbService::new().await,
+            mongodb_service: crate::services::mongodb::MongoDbService::new(),
 
             membus: crate::services::membus::MemBus::default(),
 

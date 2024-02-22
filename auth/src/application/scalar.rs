@@ -1,7 +1,7 @@
 pub use crate::domain::scalar::*;
 use uuid::Uuid;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct TransactionId(pub Uuid);
 
 impl Default for TransactionId {

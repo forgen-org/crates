@@ -1,5 +1,5 @@
 mod runtime;
-pub use runtime::*;
+pub use runtime::Runtime as AuthRuntime;
 
 #[cfg(feature = "axum")]
 mod axum;

@@ -1,6 +1,6 @@
 use crate::application::{
-    event::Event,
     scalar::{Email, PasswordHash, UserId},
+    Event,
 };
 use chrono::{DateTime, Utc};
 use forgen::*;
@@ -35,34 +35,33 @@ pub enum EventDto {
 impl From<&Event> for EventDto {
     fn from(event: &Event) -> Self {
         match event {
-            Event::Registered { at, email, user_id } => EventDto::Registered {
-                at: at.clone(),
+            Event::Registered { email, user_id } => EventDto::Registered {
+                at: Utc::now(),
                 email: email.to_string(),
                 user_id: user_id.to_string(),
             },
             Event::PasswordChanged {
-                at,
                 password_hash,
                 user_id,
             } => EventDto::PasswordChanged {
-                at: at.clone(),
+                at: Utc::now(),
                 password_hash: password_hash.0,
                 user_id: user_id.to_string(),
             },
             #[cfg(feature = "linkedin")]
             Event::LinkedInConnected {
                 access_token,
-                at,
+
                 refresh_token,
                 user_id,
             } => EventDto::LinkedInConnected {
                 access_token: access_token.clone(),
-                at: at.clone(),
+                at: Utc::now(),
                 refresh_token: refresh_token.clone(),
                 user_id: user_id.to_string(),
             },
-            Event::LoggedIn { at, user_id } => EventDto::LoggedIn {
-                at: at.clone(),
+            Event::LoggedIn { user_id } => EventDto::LoggedIn {
+                at: Utc::now(),
                 user_id: user_id.to_string(),
             },
         }
@@ -74,34 +73,30 @@ impl TryFrom<EventDto> for Event {
 
     fn try_from(dto: EventDto) -> Result<Event, Self::Error> {
         Ok(match dto {
-            EventDto::Registered { at, email, user_id } => Event::Registered {
-                at,
+            EventDto::Registered { email, user_id, .. } => Event::Registered {
                 email: Email::parse(email).map_err(UnexpectedError::from)?,
                 user_id: UserId::parse(&user_id).map_err(UnexpectedError::from)?,
             },
             EventDto::PasswordChanged {
-                at,
                 password_hash,
                 user_id,
+                ..
             } => Event::PasswordChanged {
-                at,
                 password_hash: PasswordHash(password_hash),
                 user_id: UserId::parse(&user_id).map_err(UnexpectedError::from)?,
             },
             #[cfg(feature = "linkedin")]
             EventDto::LinkedInConnected {
                 access_token,
-                at,
                 refresh_token,
                 user_id,
+                ..
             } => Event::LinkedInConnected {
                 access_token,
-                at,
                 refresh_token,
                 user_id: UserId::parse(&user_id).map_err(UnexpectedError::from)?,
             },
             EventDto::LoggedIn { at, user_id } => Event::LoggedIn {
-                at,
                 user_id: UserId::parse(&user_id).map_err(UnexpectedError::from)?,
             },
         })

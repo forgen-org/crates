@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UserId(pub Uuid);
 
 impl UserId {

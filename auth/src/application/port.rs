@@ -8,13 +8,13 @@ use forgen::*;
 pub trait EventStore {
     fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError>;
     fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<domain::Event>, UnexpectedError>;
-    fn push(&self, user_id: &UserId, events: &[domain::Event]) -> Result<(), UnexpectedError>;
+    fn push(&self, events: &[domain::Event]) -> Result<(), UnexpectedError>;
 }
 
 #[delegate]
 pub trait UserRepository {
     fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError>;
-    fn save(&self, user_id: &UserId, projection: &User) -> Result<(), UnexpectedError>;
+    fn save(&self, projection: &User) -> Result<(), UnexpectedError>;
 }
 
 #[delegate]

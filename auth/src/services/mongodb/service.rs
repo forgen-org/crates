@@ -1,6 +1,9 @@
 use super::event_dto::EventDto;
 use super::user_dto::UserDto;
-use mongodb::{options::ClientOptions, Client, Collection};
+use mongodb::{
+    options::ClientOptions,
+    sync::{Client, Collection},
+};
 
 pub struct MongoDbService {
     pub(crate) event: Collection<EventDto>,

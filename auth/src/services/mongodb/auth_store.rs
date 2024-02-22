@@ -1,10 +1,9 @@
 use super::event_dto::EventDto;
 use super::MongoDbService;
-use crate::application::event::Event;
 use crate::application::port::*;
 use crate::application::scalar::*;
+use crate::application::Event;
 use forgen::*;
-use futures::TryStreamExt;
 use mongodb::bson::doc;
 
 impl EventStore for MongoDbService {
@@ -36,7 +35,7 @@ impl EventStore for MongoDbService {
         self.event
             .find(doc! {"user_id": user_id.to_string()}, None)
             .map_err(UnexpectedError::from)?
-            .try_collect()
+            .collect::<Result<Vec<EventDto>, _>>()
             .map_err(UnexpectedError::from)
             .and_then(|events: Vec<EventDto>| {
                 events

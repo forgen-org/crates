@@ -1,6 +1,9 @@
-use crate::application::{
-    port::{Jwt, JwtPort},
-    projection::User,
+use crate::{
+    application::{
+        port::{Jwt, JwtPort},
+        projection::User,
+    },
+    scalar::{Email, UserId},
 };
 use forgen::UnexpectedError;
 use hmac::Hmac;
@@ -31,31 +34,47 @@ impl JwtPort for JwtService {
             .map_err(UnexpectedError::from)?;
         Ok(Jwt(token.as_str().to_string()))
     }
+
     fn verify(&self, token: &Jwt) -> Result<User, UnexpectedError> {
         let token: Token<Header, UserDto, _> = token
             .0
             .verify_with_key(&self.key)
             .map_err(UnexpectedError::from)?;
         let user = token.claims().clone();
-        Ok(User::from(user))
+        Ok(User::try_from(user)?)
     }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 struct UserDto {
     email: String,
+    user_id: String,
 }
 
-impl From<UserDto> for User {
-    fn from(dto: UserDto) -> Self {
-        Self { email: dto.email }
+impl TryFrom<UserDto> for User {
+    type Error = UnexpectedError;
+
+    fn try_from(dto: UserDto) -> Result<Self, Self::Error> {
+        Ok(Self {
+            email: Some(Email::parse(dto.email).map_err(UnexpectedError::from)?),
+            user_id: Some(UserId::parse(&dto.user_id).map_err(UnexpectedError::from)?),
+        })
     }
 }
 
 impl From<&User> for UserDto {
     fn from(projection: &User) -> Self {
         Self {
-            email: projection.email.clone(),
+            email: projection
+                .email
+                .as_ref()
+                .map(|email| email.to_string())
+                .unwrap_or_default(),
+            user_id: projection
+                .user_id
+                .as_ref()
+                .map(|user_id| user_id.to_string())
+                .unwrap_or_default(),
         }
     }
 }
