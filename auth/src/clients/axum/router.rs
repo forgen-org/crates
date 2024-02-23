@@ -1,8 +1,10 @@
+#[cfg(feature = "linkedin")]
+use super::api::linkedin;
 use super::api::{login, register};
-use super::runtime::SignalSub;
-use crate::application::port::*;
+use super::runtime::{Ports, SignalSub};
 use crate::command::ProjectUser;
 use crate::signal::Signal;
+use axum::routing::get;
 use axum::{routing::post, Router};
 use forgen::*;
 use std::sync::Arc;
@@ -12,7 +14,7 @@ pub struct AuthRouter;
 impl AuthRouter {
     pub fn new<R>(runtime: Arc<R>) -> Router
     where
-        R: EventStore + JwtPort + SignalSub + SignalPub + UserRepository,
+        R: Ports,
         R: Send + Sync + 'static,
     {
         tokio::spawn({
@@ -42,10 +44,20 @@ impl AuthRouter {
             }
         });
 
-        Router::new()
+        let mut router = Router::new()
             .route("/login", post(login::handler))
-            .route("/register", post(register::handler))
-            // .nest("/linkedin", linkedin::router(runtime.clone()))
-            .with_state(runtime)
+            .route("/register", post(register::handler));
+
+        #[cfg(feature = "linkedin")]
+        {
+            router = router.nest(
+                "/linkedin",
+                Router::new()
+                    .with_state(runtime.clone())
+                    .route("/callback", get(linkedin::callback::handler)),
+            );
+        }
+
+        router.with_state(runtime.clone())
     }
 }

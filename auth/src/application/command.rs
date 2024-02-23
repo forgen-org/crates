@@ -12,7 +12,7 @@ pub struct Register {
 
 impl<R> Commander<R> for Register
 where
-    R: SignalPub + EventStore + UserRepository,
+    R: EventStore + SignalPub + UserRepository,
 {
     type Error = CommandError;
 
@@ -53,7 +53,7 @@ pub struct Login {
 
 impl<R> Commander<R> for Login
 where
-    R: SignalPub + EventStore,
+    R: EventStore + SignalPub,
 {
     type Error = CommandError;
 
@@ -68,6 +68,52 @@ where
         let new_events = state.send(&Message::LogIn {
             email: self.email.clone(),
             password: self.password.clone(),
+        })?;
+
+        EventStore::push(runtime, &new_events)?;
+        SignalPub::publish(
+            runtime,
+            Signal::EventsEmitted {
+                events: new_events,
+                user_id: Some(state.user_id.clone()),
+                transaction_id: self.transaction_id.clone(),
+            },
+        );
+        Ok(())
+    }
+}
+
+#[cfg(feature = "linkedin")]
+pub struct ConnectLinkedIn {
+    pub code: String,
+    pub transaction_id: Option<TransactionId>,
+}
+
+#[cfg(feature = "linkedin")]
+impl<R> Commander<R> for ConnectLinkedIn
+where
+    R: EventStore + LinkedInPort + SignalPub,
+{
+    type Error = CommandError;
+
+    fn execute(&self, runtime: &R) -> Result<(), Self::Error> {
+        let tokens = LinkedInPort::sign_in(runtime, &self.code)?;
+
+        let email = LinkedInPort::get_email(runtime, &tokens)?;
+
+        let user_id = EventStore::identify_by_email(runtime, &email)?;
+
+        let events = match user_id {
+            Some(user_id) => EventStore::pull_by_user_id(runtime, &user_id)?,
+            None => vec![],
+        };
+
+        let state = State::new(&events);
+
+        let new_events = state.send(&Message::ConnectLinkedIn {
+            email: email.clone(),
+            access_token: tokens.access_token.clone(),
+            refresh_token: tokens.refresh_token.clone(),
         })?;
 
         EventStore::push(runtime, &new_events)?;

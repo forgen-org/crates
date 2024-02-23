@@ -1,52 +1,54 @@
-use crate::application::*;
+use crate::{
+    application::{
+        command::ConnectLinkedIn, port::*, query::GetJwtByUserId, scalar::TransactionId,
+    },
+    clients::axum::{listener::wait_for_user, runtime::SignalSub},
+};
 use axum::{
-    extract::State,
+    extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
-use framework::*;
+use forgen::*;
 use serde::Deserialize;
 use std::sync::Arc;
+use tokio::task;
 
 pub async fn handler<R>(
     State(runtime): State<Arc<R>>,
     params: Query<Params>,
-) -> Result<Json<Jwt>, Response>
+) -> Result<String, Response>
 where
-    R: Framework,
-    R: EventStore + JwtPort + UserRepository,
+    R: EventStore + LinkedInPort + JwtPort + SignalPub + SignalSub + UserRepository,
+    R: Send + Sync + 'static,
 {
-    let command = Login::try_from(payload)?;
-    let email = command.email.clone();
+    let transaction_id = TransactionId::default();
 
-    runtime
-        .execute(command)
-        .await
-        .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response())?;
+    task::spawn_blocking({
+        let runtime = runtime.clone();
+        let transaction_id = transaction_id.clone();
+        move || {
+            ConnectLinkedIn {
+                code: params.code.clone(),
+                transaction_id: Some(transaction_id.clone()),
+            }
+            .execute(runtime.as_ref())
+            .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response())
+        }
+    })
+    .await
+    .unwrap()?;
 
-    let jwt = runtime
-        .fetch(GetJwtByEmail { email })
-        .await
+    let user_id = wait_for_user(runtime.as_ref(), Some(transaction_id)).await;
+
+    let jwt = GetJwtByUserId { user_id }
+        .fetch(runtime.as_ref())
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", err)).into_response())?;
 
-    Ok(Json(jwt))
+    Ok(jwt.0)
 }
 
 #[derive(Deserialize)]
 pub struct Params {
     code: String,
-}
-
-impl TryFrom<Payload> for Login {
-    type Error = Response;
-
-    fn try_from(payload: Payload) -> Result<Self, Self::Error> {
-        Ok(Self {
-            email: Email::parse(payload.email)
-                .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid email").into_response())?,
-            password: Password::parse(payload.password)
-                .map_err(|err| (StatusCode::BAD_REQUEST, format!("{}", err)).into_response())?,
-        })
-    }
 }

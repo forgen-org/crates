@@ -11,16 +11,7 @@ pub trait EventStore {
     fn push(&self, events: &[domain::Event]) -> Result<(), UnexpectedError>;
 }
 
-#[delegate]
-pub trait UserRepository {
-    fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError>;
-    fn save(&self, projection: &User) -> Result<(), UnexpectedError>;
-}
-
-#[delegate]
-pub trait SignalPub {
-    fn publish(&self, signal: Signal);
-}
+pub struct Jwt(pub String);
 
 #[delegate]
 pub trait JwtPort {
@@ -28,8 +19,7 @@ pub trait JwtPort {
     fn verify(&self, token: &Jwt) -> Result<User, UnexpectedError>;
 }
 
-pub struct Jwt(pub String);
-
+#[delegate]
 pub trait LinkedInPort {
     fn sign_in(&self, code: &str) -> Result<LinkedInTokens, UnexpectedError>;
     fn get_email(&self, tokens: &LinkedInTokens) -> Result<Email, UnexpectedError>;
@@ -38,4 +28,15 @@ pub trait LinkedInPort {
 pub struct LinkedInTokens {
     pub access_token: String,
     pub refresh_token: String,
+}
+
+#[delegate]
+pub trait SignalPub {
+    fn publish(&self, signal: Signal);
+}
+
+#[delegate]
+pub trait UserRepository {
+    fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError>;
+    fn save(&self, projection: &User) -> Result<(), UnexpectedError>;
 }

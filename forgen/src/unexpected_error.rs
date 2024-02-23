@@ -24,7 +24,7 @@ impl UnexpectedError {
     }
 }
 
-const FILTERS: [&str; 3] = [".cargo", "rustc", "framework/src/"];
+const FILTERS: [&str; 3] = [".cargo", "rustc", "forgen/src/"];
 
 struct Trace(Backtrace);
 

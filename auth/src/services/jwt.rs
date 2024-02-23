@@ -10,13 +10,15 @@ use hmac::Hmac;
 use jwt::{AlgorithmType, Header, SignWithKey, Token, VerifyWithKey};
 use serde::{Deserialize, Serialize};
 use sha2::{digest::KeyInit, Sha384};
+use std::env;
 
 pub struct JwtService {
     key: Hmac<Sha384>,
 }
 
-impl JwtService {
-    pub fn new(secret_key: &str) -> Self {
+impl Default for JwtService {
+    fn default() -> Self {
+        let secret_key = env::var("AUTH_JWT_SECRET").expect("Missing AUTH_JWT_SECRET");
         Self {
             key: Hmac::new_from_slice(secret_key.as_bytes()).unwrap(),
         }

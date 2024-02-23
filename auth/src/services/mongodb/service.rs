@@ -10,9 +10,11 @@ pub struct MongoDbService {
     pub(crate) user: Collection<UserDto>,
 }
 
-impl MongoDbService {
-    pub fn new() -> Self {
-        let client_options = ClientOptions::parse("mongodb://localhost:27017").unwrap();
+impl Default for MongoDbService {
+    fn default() -> Self {
+        let mongo_url = std::env::var("AUTH_MONGO_URL")
+            .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
+        let client_options = ClientOptions::parse(mongo_url).unwrap();
         let client = Client::with_options(client_options).unwrap();
         let db = client.database("auth");
 

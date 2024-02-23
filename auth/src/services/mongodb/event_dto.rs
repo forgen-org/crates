@@ -96,7 +96,7 @@ impl TryFrom<EventDto> for Event {
                 refresh_token,
                 user_id: UserId::parse(&user_id).map_err(UnexpectedError::from)?,
             },
-            EventDto::LoggedIn { at, user_id } => Event::LoggedIn {
+            EventDto::LoggedIn { user_id, .. } => Event::LoggedIn {
                 user_id: UserId::parse(&user_id).map_err(UnexpectedError::from)?,
             },
         })
