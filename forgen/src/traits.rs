@@ -1,3 +1,5 @@
+use async_trait::async_trait;
+
 pub trait Messenger: Default {
     type Message;
     type Event;
@@ -31,15 +33,17 @@ pub trait Snapshoter: Projector {
     fn rewind(&self) -> Result<Vec<Self::Event>, Self::Error>;
 }
 
+#[async_trait]
 pub trait Commander<R> {
     type Error: std::error::Error;
 
-    fn execute(&self, runtime: &R) -> Result<(), Self::Error>;
+    async fn execute(&self, runtime: &R) -> Result<(), Self::Error>;
 }
 
+#[async_trait]
 pub trait Querier<R> {
     type Output;
     type Error: std::error::Error;
 
-    fn fetch(&self, runtime: &R) -> Result<Self::Output, Self::Error>;
+    async fn fetch(&self, runtime: &R) -> Result<Self::Output, Self::Error>;
 }

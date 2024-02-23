@@ -1,6 +1,6 @@
-use std::sync::Mutex;
-
 use crate::application::{port::SignalPub, signal::Signal};
+use forgen::*;
+use std::sync::Mutex;
 use tokio::sync::broadcast::{self, Receiver, Sender};
 
 pub struct TokioBus {
@@ -16,8 +16,9 @@ impl Default for TokioBus {
     }
 }
 
+#[async_trait]
 impl SignalPub for TokioBus {
-    fn publish(&self, signal: Signal) -> () {
+    async fn publish(&self, signal: Signal) -> () {
         let sender = self.sender.lock().unwrap();
         // Ignore the error if there are no subscribers
         let _ = sender.send(signal);

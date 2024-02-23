@@ -31,7 +31,7 @@ where
         .map(|s| Jwt(s))
     {
         Some(token) => {
-            if let Ok(user) = JwtPort::verify(runtime.as_ref(), &token) {
+            if let Ok(user) = JwtPort::verify(runtime.as_ref(), &token).await {
                 req.extensions_mut().insert(Arc::new(user));
                 Ok(next.run(req).await)
             } else {

@@ -35,6 +35,7 @@ impl AuthRouter {
                                     transaction_id: transaction_id.clone(),
                                 }
                                 .execute(runtime.as_ref())
+                                .await
                                 .unwrap();
                             }
                         }

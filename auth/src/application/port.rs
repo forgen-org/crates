@@ -4,25 +4,31 @@ use crate::domain;
 use crate::domain::scalar::*;
 use forgen::*;
 
+#[async_trait]
 #[delegate]
 pub trait EventStore {
-    fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError>;
-    fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<domain::Event>, UnexpectedError>;
-    fn push(&self, events: &[domain::Event]) -> Result<(), UnexpectedError>;
+    async fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError>;
+    async fn pull_by_user_id(
+        &self,
+        user_id: &UserId,
+    ) -> Result<Vec<domain::Event>, UnexpectedError>;
+    async fn push(&self, events: &[domain::Event]) -> Result<(), UnexpectedError>;
 }
 
 pub struct Jwt(pub String);
 
+#[async_trait]
 #[delegate]
 pub trait JwtPort {
-    fn sign(&self, user: &User) -> Result<Jwt, UnexpectedError>;
-    fn verify(&self, token: &Jwt) -> Result<User, UnexpectedError>;
+    async fn sign(&self, user: &User) -> Result<Jwt, UnexpectedError>;
+    async fn verify(&self, token: &Jwt) -> Result<User, UnexpectedError>;
 }
 
+#[async_trait]
 #[delegate]
 pub trait LinkedInPort {
-    fn sign_in(&self, code: &str) -> Result<LinkedInTokens, UnexpectedError>;
-    fn get_email(&self, tokens: &LinkedInTokens) -> Result<Email, UnexpectedError>;
+    async fn sign_in(&self, code: &str) -> Result<LinkedInTokens, UnexpectedError>;
+    async fn get_email(&self, tokens: &LinkedInTokens) -> Result<Email, UnexpectedError>;
 }
 
 pub struct LinkedInTokens {
@@ -30,13 +36,15 @@ pub struct LinkedInTokens {
     pub refresh_token: String,
 }
 
+#[async_trait]
 #[delegate]
 pub trait SignalPub {
-    fn publish(&self, signal: Signal);
+    async fn publish(&self, signal: Signal);
 }
 
+#[async_trait]
 #[delegate]
 pub trait UserRepository {
-    fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError>;
-    fn save(&self, projection: &User) -> Result<(), UnexpectedError>;
+    async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError>;
+    async fn save(&self, projection: &User) -> Result<(), UnexpectedError>;
 }

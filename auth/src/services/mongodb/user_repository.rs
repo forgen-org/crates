@@ -4,11 +4,13 @@ use crate::application::{port::UserRepository, projection::User, scalar::UserId}
 use forgen::*;
 use mongodb::{bson::doc, options::ReplaceOptions};
 
+#[async_trait]
 impl UserRepository for MongoDbService {
-    fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError> {
+    async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError> {
         let dto = self
             .user
             .find_one(doc! {"user_id": user_id.to_string()}, None)
+            .await
             .map_err(UnexpectedError::from)?;
 
         match dto {
@@ -17,7 +19,7 @@ impl UserRepository for MongoDbService {
         }
     }
 
-    fn save(&self, projection: &User) -> Result<(), UnexpectedError> {
+    async fn save(&self, projection: &User) -> Result<(), UnexpectedError> {
         let user_id = projection
             .user_id
             .as_ref()
@@ -30,6 +32,7 @@ impl UserRepository for MongoDbService {
                 UserDto::from(projection),
                 ReplaceOptions::builder().upsert(true).build(),
             )
+            .await
             .map(|_| ())
             .map_err(UnexpectedError::from)
     }

@@ -24,25 +24,19 @@ where
 {
     let transaction_id = TransactionId::default();
 
-    task::spawn_blocking({
-        let runtime = runtime.clone();
-        let transaction_id = transaction_id.clone();
-        move || {
-            ConnectLinkedIn {
-                code: params.code.clone(),
-                transaction_id: Some(transaction_id.clone()),
-            }
-            .execute(runtime.as_ref())
-            .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response())
-        }
-    })
+    ConnectLinkedIn {
+        code: params.code.clone(),
+        transaction_id: Some(transaction_id.clone()),
+    }
+    .execute(runtime.as_ref())
     .await
-    .unwrap()?;
+    .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response());
 
     let user_id = wait_for_user(runtime.as_ref(), Some(transaction_id)).await;
 
     let jwt = GetJwtByUserId { user_id }
         .fetch(runtime.as_ref())
+        .await
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", err)).into_response())?;
 
     Ok(jwt.0)

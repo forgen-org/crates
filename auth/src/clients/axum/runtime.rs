@@ -3,7 +3,7 @@ use crate::signal::Signal;
 use forgen::*;
 use tokio::sync::broadcast::Receiver;
 
-#[derive(Default, Delegate)]
+#[derive(Delegate)]
 pub struct Runtime {
     #[to(JwtPort)]
     jwt_service: crate::services::jwt::JwtService,
@@ -20,6 +20,18 @@ pub struct Runtime {
     tokiobus: crate::services::tokiobus::TokioBus,
 }
 
+impl Runtime {
+    pub async fn new() -> Self {
+        Self {
+            jwt_service: crate::services::jwt::JwtService::default(),
+            #[cfg(feature = "linkedin")]
+            linkedin_service: crate::services::linkedin::LinkedInService::default(),
+            #[cfg(feature = "mongodb")]
+            mongodb_service: crate::services::mongodb::MongoDbService::new().await,
+            tokiobus: crate::services::tokiobus::TokioBus::default(),
+        }
+    }
+}
 pub trait SignalSub {
     fn subscribe(&self) -> Receiver<Signal>;
 }

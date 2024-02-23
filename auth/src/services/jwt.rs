@@ -5,7 +5,7 @@ use crate::{
     },
     scalar::{Email, UserId},
 };
-use forgen::UnexpectedError;
+use forgen::*;
 use hmac::Hmac;
 use jwt::{AlgorithmType, Header, SignWithKey, Token, VerifyWithKey};
 use serde::{Deserialize, Serialize};
@@ -25,8 +25,9 @@ impl Default for JwtService {
     }
 }
 
+#[async_trait]
 impl JwtPort for JwtService {
-    fn sign(&self, user: &User) -> Result<Jwt, UnexpectedError> {
+    async fn sign(&self, user: &User) -> Result<Jwt, UnexpectedError> {
         let header = Header {
             algorithm: AlgorithmType::Hs384,
             ..Default::default()
@@ -37,7 +38,7 @@ impl JwtPort for JwtService {
         Ok(Jwt(token.as_str().to_string()))
     }
 
-    fn verify(&self, token: &Jwt) -> Result<User, UnexpectedError> {
+    async fn verify(&self, token: &Jwt) -> Result<User, UnexpectedError> {
         let token: Token<Header, UserDto, _> = token
             .0
             .verify_with_key(&self.key)

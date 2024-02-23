@@ -31,6 +31,7 @@ where
 
     command
         .execute(runtime.as_ref())
+        .await
         .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response())?;
 
     let user_id = wait_for_user(runtime.as_ref(), command.transaction_id).await;
@@ -39,6 +40,7 @@ where
 
     let jwt = query
         .fetch(runtime.as_ref())
+        .await
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, format!("{}", err)).into_response())?;
 
     Ok(jwt.0)
