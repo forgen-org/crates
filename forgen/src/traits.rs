@@ -52,3 +52,11 @@ pub trait Fetch<R> {
 
     async fn fetch(&self, runtime: &R) -> Result<Self::Output, Self::Error>;
 }
+
+/// Implement on Presenters
+#[async_trait]
+pub trait Reduce<R> {
+    type Action;
+
+    async fn reduce(&self, runtime: &R, action: Self::Action) -> Self;
+}

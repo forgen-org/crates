@@ -12,22 +12,33 @@ use mongodb::{
 };
 
 pub struct MongoDbService {
-    pub(crate) event: Collection<Event>,
-    pub(crate) user: Collection<User>,
+    database_name: String,
+    mongo_url: String,
+}
+
+impl Default for MongoDbService {
+    fn default() -> Self {
+        Self {
+            database_name: "auth".to_string(),
+            mongo_url: std::env::var("AUTH_MONGO_URL")
+                .unwrap_or_else(|_| "mongodb://localhost:27017".to_string()),
+        }
+    }
 }
 
 impl MongoDbService {
-    pub async fn new() -> Self {
-        let mongo_url = std::env::var("AUTH_MONGO_URL")
-            .unwrap_or_else(|_| "mongodb://localhost:27017".to_string());
-        let client_options = ClientOptions::parse(mongo_url).await.unwrap();
+    async fn events(&self) -> Collection<Event> {
+        let client_options = ClientOptions::parse(&self.mongo_url).await.unwrap();
         let client = Client::with_options(client_options).unwrap();
-        let db = client.database("auth");
+        let db = client.database(&self.database_name);
+        db.collection("auth_events")
+    }
 
-        Self {
-            event: db.collection("auth_events"),
-            user: db.collection("auth_user"),
-        }
+    async fn users(&self) -> Collection<User> {
+        let client_options = ClientOptions::parse(&self.mongo_url).await.unwrap();
+        let client = Client::with_options(client_options).unwrap();
+        let db = client.database(&self.database_name);
+        db.collection("auth_user")
     }
 }
 
@@ -35,7 +46,8 @@ impl MongoDbService {
 impl EventStore for MongoDbService {
     async fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError> {
         let event_option = self
-            .event
+            .events()
+            .await
             .find_one(
                 doc! {"_tag": "Registered", "email": email.to_string()},
                 None,
@@ -59,7 +71,8 @@ impl EventStore for MongoDbService {
     }
 
     async fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<Event>, UnexpectedError> {
-        self.event
+        self.events()
+            .await
             .find(doc! {"user_id": user_id.to_string()}, None)
             .await
             .map_err(UnexpectedError::from)?
@@ -69,7 +82,8 @@ impl EventStore for MongoDbService {
     }
 
     async fn push(&self, events: &[Event]) -> Result<(), UnexpectedError> {
-        self.event
+        self.events()
+            .await
             .insert_many(events, None)
             .await
             .map(|_| ())
@@ -80,7 +94,8 @@ impl EventStore for MongoDbService {
 #[async_trait]
 impl UserRepository for MongoDbService {
     async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError> {
-        self.user
+        self.users()
+            .await
             .find_one(doc! {"user_id": user_id.to_string()}, None)
             .await
             .map_err(UnexpectedError::from)
@@ -93,7 +108,8 @@ impl UserRepository for MongoDbService {
             .map(|user_id| user_id.to_string())
             .unwrap_or_default();
 
-        self.user
+        self.users()
+            .await
             .replace_one(
                 doc! {"user_id": user_id },
                 projection,

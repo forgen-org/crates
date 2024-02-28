@@ -1,7 +1,8 @@
 use forgen::*;
 
-#[derive(Delegate)]
+#[derive(Default, Delegate)]
 pub struct Runtime {
+    #[cfg(feature = "jwt")]
     #[to(JwtPort)]
     pub jwt: crate::services::jwt::JwtService,
 
@@ -16,18 +17,8 @@ pub struct Runtime {
     #[cfg(feature = "tokio")]
     #[to(SignalPub, TransactionBus)]
     pub tokio: crate::services::tokio::Tokio,
-}
 
-impl Runtime {
-    pub async fn new() -> Self {
-        Self {
-            jwt: crate::services::jwt::JwtService::default(),
-            #[cfg(feature = "linkedin")]
-            linkedin: crate::services::linkedin::LinkedInService::default(),
-            #[cfg(feature = "mongodb")]
-            mongodb: crate::services::mongodb::MongoDbService::new().await,
-            #[cfg(feature = "tokio")]
-            tokio: crate::services::tokio::Tokio::default(),
-        }
-    }
+    #[cfg(feature = "web_sys")]
+    #[to(WebView)]
+    pub web_sys: crate::services::web_sys::WebSys,
 }
