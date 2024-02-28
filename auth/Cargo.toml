@@ -6,22 +6,26 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+base64 = "0.21.7"
 chrono = { version = "0.4.33", features = ["serde"] }
 forgen = { path = "../forgen" }
 futures = { version = "0.3.30", optional = true }
+gloo-net = { version = "0.5.0", optional = true }
+gloo-storage = { version = "0.3.0", optional = true }
 hmac = { version = "0.12.1", optional = true }
 jwt = { version = "0.16.0", optional = true }
-mongodb = { version = "2.8.0", optional = true }
+mongodb = { version = "2.8.0", features = ["bson-uuid-1"], optional = true }
 regex = "1.10.3"
 reqwest = { version = "0.11", features = ["json"],  optional = true }
-serde = "1.0.196"
+serde = { version = "1.0.196", features = ["derive"] }
 serde_json = { version = "1.0.113", optional = true }
 serde_urlencoded = { version = "0.7.1", optional = true }
 sha2 = "0.10.8"
 tokio = { version = "1.0", features = ["full"], optional = true }
 urlencoding = { version = "2.1.3", optional = true }
 uuid = { version = "1.7.0", features = ["serde", "v4"] }
-web-sys = { version = "0.3.68", features = ["Document", "Location", "Url", "UrlSearchParams", "Window"], optional = true }
+wasm-bindgen-futures = { version = "0.4.41", optional = true }
+web-sys = { version = "0.3.68", features = ["Document", "Location", "Request", "Url", "UrlSearchParams", "Window"], optional = true }
 yew = { git = "https://github.com/yewstack/yew/", optional = true }
 
 [dev-dependencies]
@@ -30,10 +34,10 @@ serde_json = "1.0.113"
 tokio = { version = "1.0", features = ["full"] }
 
 [features]
-default = ["jwt"]
+default = []
 jwt = ["dep:hmac", "dep:jwt"]
 linkedin = ["dep:reqwest", "dep:serde_urlencoded"]
-mongodb = ["dep:futures", "dep:mongodb"]
+mongodb = ["dep:futures", "dep:mongodb", "dep:serde_json"]
 tokio = ["dep:tokio"]
-web_sys = ["dep:web-sys"]
+web_sys = ["dep:gloo-net", "dep:gloo-storage", "dep:wasm-bindgen-futures", "dep:web-sys"]
 yew = ["dep:yew"]

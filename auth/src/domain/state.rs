@@ -50,7 +50,6 @@ impl Dispatch for State {
                     Err(Error::InvalidPassword)
                 }
             }
-            #[cfg(feature = "linkedin")]
             Message::ConnectLinkedIn {
                 email,
                 access_token,

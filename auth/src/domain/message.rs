@@ -9,7 +9,6 @@ pub enum Message {
         email: Email,
         password: Password,
     },
-    #[cfg(feature = "linkedin")]
     ConnectLinkedIn {
         email: Email,
         access_token: String,

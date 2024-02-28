@@ -19,6 +19,6 @@ pub struct Runtime {
     pub tokio: crate::services::tokio::Tokio,
 
     #[cfg(feature = "web_sys")]
-    #[to(WebView)]
+    #[to(JwtStore, WebView)]
     pub web_sys: crate::services::web_sys::WebSys,
 }

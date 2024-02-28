@@ -54,7 +54,7 @@ pub trait Fetch<R> {
 }
 
 /// Implement on Presenters
-#[async_trait]
+#[async_trait(?Send)]
 pub trait Reduce<R> {
     type Action;
 

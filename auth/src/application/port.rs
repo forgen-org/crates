@@ -12,7 +12,7 @@ pub trait EventStore {
     async fn push(&self, events: &[Event]) -> Result<(), UnexpectedError>;
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Jwt(pub String);
 
 #[async_trait]
@@ -20,6 +20,13 @@ pub struct Jwt(pub String);
 pub trait JwtPort {
     async fn sign(&self, user: &User) -> Result<Jwt, UnexpectedError>;
     async fn verify(&self, token: &Jwt) -> Result<User, UnexpectedError>;
+}
+
+#[async_trait]
+#[delegate]
+pub trait JwtStore {
+    async fn get(&self) -> Option<Jwt>;
+    async fn set(&self, jwt: &Jwt);
 }
 
 #[async_trait]
@@ -58,7 +65,7 @@ pub trait SignalPub {
     async fn publish(&self, signal: Signal);
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash)]
 pub struct TransactionId(pub Uuid);
 
 impl Default for TransactionId {
@@ -80,9 +87,12 @@ pub trait UserRepository {
     async fn save(&self, projection: &User) -> Result<(), UnexpectedError>;
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 #[delegate]
 pub trait WebView {
     fn get_query_param(&self, key: &str) -> Option<String>;
-    async fn push(&self, url: &str) -> Result<(), UnexpectedError>;
+    async fn open(&self, url: &str) -> Result<(), UnexpectedError>;
+    async fn post<T>(&self, url: &str, data: T) -> Result<Jwt, UnexpectedError>
+    where
+        T: Serialize;
 }

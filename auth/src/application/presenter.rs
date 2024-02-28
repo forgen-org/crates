@@ -1,7 +1,8 @@
+use super::command::ConnectLinkedIn;
 use super::port::*;
 use forgen::*;
 
-#[derive(Default, Clone, PartialEq)]
+#[derive(Clone, Default, PartialEq)]
 pub struct LoginForm {
     email: String,
     error: Option<String>,
@@ -9,18 +10,19 @@ pub struct LoginForm {
 }
 
 pub enum LoginAction {
-    Init,
-    #[cfg(feature = "linkedin")]
+    Init {
+        linkedin_api_url: Option<String>,
+    },
     LoginWithLinkedIn {
         client_id: String,
         redirect_uri: String,
     },
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl<R> Reduce<R> for LoginForm
 where
-    R: WebView,
+    R: JwtStore + WebView,
     R: Send + Sync,
 {
     type Action = LoginAction;
@@ -29,27 +31,32 @@ where
         let mut state = self.clone();
 
         match action {
-            Self::Action::Init => {
-                let code = WebView::get_query_param(runtime, "code");
-                // if let Some(code) = code {
-                // let command = ConnectLinkedIn {
-                //     code,
-                //     transaction_id: None,
-                // };
-                // if let Err(error) = command.execute(runtime).await {
-                //     self.error = Some(error.to_string());
-                // }
-                // }
-                panic!("code: {:?}", code);
+            Self::Action::Init { linkedin_api_url } => {
+                if let Some(linkedin_api_url) = linkedin_api_url {
+                    if let Some(code) = WebView::get_query_param(runtime, "code") {
+                        if let Ok(jwt) = WebView::post(
+                            runtime,
+                            &linkedin_api_url,
+                            ConnectLinkedIn {
+                                code,
+                                transaction_id: None,
+                            },
+                        )
+                        .await
+                        {
+                            info!("jwt: {}", &jwt.0);
+                            JwtStore::set(runtime, &jwt).await;
+                        }
+                    }
+                }
             }
-            #[cfg(feature = "linkedin")]
             Self::Action::LoginWithLinkedIn {
                 client_id,
                 redirect_uri,
             } => {
-                let url = format!("https://www.linkedin.com/oauth/v2/authorization?response_type={}&client_id={}&redirect_uri={}&scope={}", &"code", &client_id, &redirect_uri, "open_id,profile,email");
+                let url = format!("https://www.linkedin.com/oauth/v2/authorization?response_type={}&client_id={}&redirect_uri={}&scope={}", &"code", &client_id, &redirect_uri, "openid%20profile%20email");
 
-                if let Err(error) = WebView::push(runtime, &url).await {
+                if let Err(error) = WebView::open(runtime, &url).await {
                     state.error = Some(error.to_string());
                 }
             }

@@ -4,18 +4,9 @@ use crate::domain::{
     Error, Event, Message, State,
 };
 use forgen::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
-pub enum Command {
-    Register(Register),
-    Login(Login),
-    #[cfg(feature = "linkedin")]
-    ConnectLinkedIn(ConnectLinkedIn),
-    ProjectUser(ProjectUser),
-}
-
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Register {
     pub email: Email,
     pub password: Password,
@@ -74,7 +65,7 @@ where
 //     }
 // }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Login {
     pub email: Email,
     pub password: Password,
@@ -117,14 +108,12 @@ where
     }
 }
 
-#[cfg(feature = "linkedin")]
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ConnectLinkedIn {
     pub code: String,
     pub transaction_id: Option<TransactionId>,
 }
 
-#[cfg(feature = "linkedin")]
 #[async_trait]
 impl<R> Execute<R> for ConnectLinkedIn
 where
@@ -167,7 +156,7 @@ where
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ProjectUser {
     pub events: Vec<Event>,
     pub transaction_id: Option<TransactionId>,

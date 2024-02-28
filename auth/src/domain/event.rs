@@ -1,7 +1,8 @@
 use super::scalar::{Email, PasswordHash, UserId};
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind")]
 pub enum Event {
     Registered {
         email: Email,
@@ -11,7 +12,6 @@ pub enum Event {
         password_hash: PasswordHash,
         user_id: UserId,
     },
-    #[cfg(feature = "linkedin")]
     LinkedInConnected {
         access_token: String,
         refresh_token: Option<String>,

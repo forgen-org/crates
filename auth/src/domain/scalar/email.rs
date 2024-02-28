@@ -2,7 +2,7 @@ use forgen::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Email(#[serde(deserialize_with = "Email::deserialize")] String);
 
 impl Email {

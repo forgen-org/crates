@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::password::Password;
 
-#[derive(Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PasswordHash(pub [u8; 32]);
 
 impl From<Password> for PasswordHash {

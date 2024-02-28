@@ -3,10 +3,13 @@ use crate::domain::{
     event::Event,
     scalar::{Email, UserId},
 };
+use base64::prelude::*;
 use forgen::*;
 use futures::TryStreamExt;
+use mongodb::bson::spec::BinarySubtype;
+use mongodb::bson::Bson;
 use mongodb::{
-    bson::doc,
+    bson::{doc, Binary},
     options::{ClientOptions, ReplaceOptions},
     Client, Collection,
 };
@@ -48,10 +51,7 @@ impl EventStore for MongoDbService {
         let event_option = self
             .events()
             .await
-            .find_one(
-                doc! {"_tag": "Registered", "email": email.to_string()},
-                None,
-            )
+            .find_one(doc! { "email": email.to_string() }, None)
             .await
             .map_err(UnexpectedError::from)?;
 
@@ -73,7 +73,7 @@ impl EventStore for MongoDbService {
     async fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<Event>, UnexpectedError> {
         self.events()
             .await
-            .find(doc! {"user_id": user_id.to_string()}, None)
+            .find(doc! { "user_id": user_id }, None)
             .await
             .map_err(UnexpectedError::from)?
             .try_collect()
@@ -96,7 +96,7 @@ impl UserRepository for MongoDbService {
     async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError> {
         self.users()
             .await
-            .find_one(doc! {"user_id": user_id.to_string()}, None)
+            .find_one(doc! { "user_id": user_id }, None)
             .await
             .map_err(UnexpectedError::from)
     }
@@ -111,12 +111,21 @@ impl UserRepository for MongoDbService {
         self.users()
             .await
             .replace_one(
-                doc! {"user_id": user_id },
+                doc! { "user_id": user_id },
                 projection,
                 ReplaceOptions::builder().upsert(true).build(),
             )
             .await
             .map(|_| ())
             .map_err(UnexpectedError::from)
+    }
+}
+
+impl From<UserId> for Bson {
+    fn from(user_id: UserId) -> Self {
+        Bson::Binary(Binary {
+            subtype: BinarySubtype::Generic,
+            bytes: user_id.0.as_bytes().to_vec(),
+        })
     }
 }
