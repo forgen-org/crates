@@ -1,9 +1,20 @@
 use forgen::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone)]
-pub struct Password(String);
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Password(#[serde(deserialize_with = "Password::deserialize")] String);
 
 impl Password {
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Password::parse(value)
+            .map(|Password(value)| value)
+            .map_err(serde::de::Error::custom)
+    }
+
     pub fn parse<T>(value: T) -> Result<Self, PasswordError>
     where
         T: ToString,

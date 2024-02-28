@@ -1,8 +1,7 @@
-use crate::scalar::UserId;
+use super::scalar::{Email, PasswordHash, UserId};
+use serde::{Deserialize, Serialize};
 
-use super::scalar::{Email, PasswordHash};
-
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Serialize)]
 pub enum Event {
     Registered {
         email: Email,
@@ -15,7 +14,7 @@ pub enum Event {
     #[cfg(feature = "linkedin")]
     LinkedInConnected {
         access_token: String,
-        refresh_token: String,
+        refresh_token: Option<String>,
         user_id: UserId,
     },
     LoggedIn {

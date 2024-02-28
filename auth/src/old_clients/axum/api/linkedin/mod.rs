@@ -12,7 +12,6 @@ use axum::{
 use forgen::*;
 use serde::Deserialize;
 use std::sync::Arc;
-use tokio::task;
 
 pub async fn handler<R>(
     State(runtime): State<Arc<R>>,
@@ -30,7 +29,7 @@ where
     }
     .execute(runtime.as_ref())
     .await
-    .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response());
+    .map_err(|err| (StatusCode::UNAUTHORIZED, format!("{}", err)).into_response())?;
 
     let user_id = wait_for_user(runtime.as_ref(), Some(transaction_id)).await;
 

@@ -13,6 +13,6 @@ pub enum Message {
     ConnectLinkedIn {
         email: Email,
         access_token: String,
-        refresh_token: String,
+        refresh_token: Option<String>,
     },
 }

@@ -1,9 +1,9 @@
-use crate::scalar::UserId;
-
-use super::error::Error;
-use super::event::Event;
-use super::message::Message;
-use super::scalar::{Email, PasswordHash};
+use super::{
+    error::Error,
+    event::Event,
+    message::Message,
+    scalar::{Email, PasswordHash, UserId},
+};
 use forgen::*;
 
 #[derive(Default)]
@@ -13,12 +13,12 @@ pub struct State {
     pub password_hash: Option<PasswordHash>,
 }
 
-impl Messenger for State {
+impl Dispatch for State {
     type Error = Error;
     type Event = Event;
     type Message = Message;
 
-    fn send(&self, message: &Self::Message) -> Result<Vec<Self::Event>, Self::Error> {
+    fn dispatch(&self, message: &Self::Message) -> Result<Vec<Self::Event>, Self::Error> {
         match message {
             Message::Register { email, password } => {
                 if self.email.is_some() {
@@ -60,6 +60,12 @@ impl Messenger for State {
                     if existing_email != email {
                         return Err(Error::InvalidEmail);
                     }
+                    Ok(vec![Event::LinkedInConnected {
+                        access_token: access_token.clone(),
+                        refresh_token: refresh_token.clone(),
+                        user_id: self.user_id.clone(),
+                    }])
+                } else {
                     Ok(vec![
                         Event::Registered {
                             email: email.clone(),
@@ -71,19 +77,13 @@ impl Messenger for State {
                             user_id: self.user_id.clone(),
                         },
                     ])
-                } else {
-                    Ok(vec![Event::LinkedInConnected {
-                        access_token: access_token.clone(),
-                        refresh_token: refresh_token.clone(),
-                        user_id: self.user_id.clone(),
-                    }])
                 }
             }
         }
     }
 }
 
-impl Projector for State {
+impl Project for State {
     type Event = Event;
 
     fn push(&mut self, event: &Self::Event) -> &mut Self {

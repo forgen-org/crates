@@ -1,9 +1,21 @@
 use super::port::*;
-use super::scalar::*;
-use crate::domain::{Error, Event, Message, State};
-use crate::signal::Signal;
+use crate::domain::{
+    scalar::{Email, Password, UserId},
+    Error, Event, Message, State,
+};
 use forgen::*;
+use serde::Deserialize;
 
+#[derive(Deserialize)]
+pub enum Command {
+    Register(Register),
+    Login(Login),
+    #[cfg(feature = "linkedin")]
+    ConnectLinkedIn(ConnectLinkedIn),
+    ProjectUser(ProjectUser),
+}
+
+#[derive(Deserialize)]
 pub struct Register {
     pub email: Email,
     pub password: Password,
@@ -11,7 +23,7 @@ pub struct Register {
 }
 
 #[async_trait]
-impl<R> Commander<R> for Register
+impl<R> Execute<R> for Register
 where
     R: EventStore + SignalPub + UserRepository,
     R: Send + Sync,
@@ -26,9 +38,9 @@ where
             None => vec![],
         };
 
-        let state = State::new(&events);
+        let state = State::project(&events);
 
-        let new_events = state.send(&Message::Register {
+        let new_events = state.dispatch(&Message::Register {
             email: self.email.clone(),
             password: self.password.clone(),
         })?;
@@ -48,6 +60,21 @@ where
     }
 }
 
+// #[async_trait]
+// impl<R> Execute<R> for Register
+// where
+//     R: WebView,
+//     R: Send + Sync,
+// {
+//     type Error = CommandError;
+
+//     async fn execute(&self, runtime: &R) -> Result<(), Self::Error> {
+//         WebView::push(runtime, "");
+//         todo!();
+//     }
+// }
+
+#[derive(Deserialize)]
 pub struct Login {
     pub email: Email,
     pub password: Password,
@@ -55,7 +82,7 @@ pub struct Login {
 }
 
 #[async_trait]
-impl<R> Commander<R> for Login
+impl<R> Execute<R> for Login
 where
     R: EventStore + SignalPub,
     R: Send + Sync,
@@ -69,9 +96,9 @@ where
 
         let events = EventStore::pull_by_user_id(runtime, &user_id).await?;
 
-        let state = State::new(&events);
+        let state = State::project(&events);
 
-        let new_events = state.send(&Message::LogIn {
+        let new_events = state.dispatch(&Message::LogIn {
             email: self.email.clone(),
             password: self.password.clone(),
         })?;
@@ -91,6 +118,7 @@ where
 }
 
 #[cfg(feature = "linkedin")]
+#[derive(Deserialize)]
 pub struct ConnectLinkedIn {
     pub code: String,
     pub transaction_id: Option<TransactionId>,
@@ -98,7 +126,7 @@ pub struct ConnectLinkedIn {
 
 #[cfg(feature = "linkedin")]
 #[async_trait]
-impl<R> Commander<R> for ConnectLinkedIn
+impl<R> Execute<R> for ConnectLinkedIn
 where
     R: EventStore + LinkedInPort + SignalPub,
     R: Send + Sync,
@@ -117,9 +145,9 @@ where
             None => vec![],
         };
 
-        let state = State::new(&events);
+        let state = State::project(&events);
 
-        let new_events = state.send(&Message::ConnectLinkedIn {
+        let new_events = state.dispatch(&Message::ConnectLinkedIn {
             email: email.clone(),
             access_token: tokens.access_token.clone(),
             refresh_token: tokens.refresh_token.clone(),
@@ -139,6 +167,7 @@ where
     }
 }
 
+#[derive(Deserialize)]
 pub struct ProjectUser {
     pub events: Vec<Event>,
     pub transaction_id: Option<TransactionId>,
@@ -146,7 +175,7 @@ pub struct ProjectUser {
 }
 
 #[async_trait]
-impl<R> Commander<R> for ProjectUser
+impl<R> Execute<R> for ProjectUser
 where
     R: SignalPub + UserRepository,
     R: Send + Sync,

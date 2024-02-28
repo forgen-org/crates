@@ -1,16 +1,17 @@
-use crate::{
-    domain::Event,
+use crate::domain::{
     scalar::{Email, UserId},
+    Event,
 };
 use forgen::*;
+use serde::{Deserialize, Serialize};
 
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct User {
     pub email: Option<Email>,
     pub user_id: Option<UserId>,
 }
 
-impl Projector for User {
+impl Project for User {
     type Event = Event;
 
     fn push(&mut self, event: &Event) -> &mut Self {

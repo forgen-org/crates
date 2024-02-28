@@ -3,7 +3,7 @@ use crate::{
         port::{Jwt, JwtPort},
         projection::User,
     },
-    scalar::{Email, UserId},
+    domain::scalar::{Email, UserId},
 };
 use forgen::*;
 use hmac::Hmac;

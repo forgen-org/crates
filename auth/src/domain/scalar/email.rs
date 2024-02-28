@@ -1,10 +1,21 @@
 use forgen::*;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, PartialEq)]
-pub struct Email(String);
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct Email(#[serde(deserialize_with = "Email::deserialize")] String);
 
 impl Email {
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        Email::parse(value)
+            .map(|Email(value)| value)
+            .map_err(serde::de::Error::custom)
+    }
+
     pub fn parse<T>(value: T) -> Result<Self, EmailError>
     where
         T: ToString,

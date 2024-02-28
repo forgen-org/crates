@@ -51,12 +51,7 @@ impl AuthRouter {
 
         #[cfg(feature = "linkedin")]
         {
-            router = router.nest(
-                "/linkedin",
-                Router::new()
-                    .with_state(runtime.clone())
-                    .route("/callback", get(linkedin::callback::handler)),
-            );
+            router = router.route("/linkedin", get(linkedin::handler));
         }
 
         router.with_state(runtime.clone())

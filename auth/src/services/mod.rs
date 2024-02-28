@@ -7,5 +7,8 @@ pub mod linkedin;
 #[cfg(feature = "mongodb")]
 pub mod mongodb;
 
-#[cfg(feature = "axum")]
-pub mod tokiobus;
+#[cfg(feature = "tokio")]
+pub mod tokio;
+
+#[cfg(feature = "wasm")]
+pub mod wasm;

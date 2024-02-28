@@ -1,14 +1,16 @@
 use async_trait::async_trait;
 
-pub trait Messenger: Default {
+/// Implement on Events
+pub trait Dispatch: Default {
     type Message;
     type Event;
     type Error: std::error::Error;
 
-    fn send(&self, message: &Self::Message) -> Result<Vec<Self::Event>, Self::Error>;
+    fn dispatch(&self, message: &Self::Message) -> Result<Vec<Self::Event>, Self::Error>;
 }
 
-pub trait Projector: Default {
+/// Implement on Projections
+pub trait Project: Default {
     type Event;
 
     fn push(&mut self, event: &Self::Event) -> &mut Self;
@@ -20,28 +22,31 @@ pub trait Projector: Default {
         self
     }
 
-    fn new(events: &[Self::Event]) -> Self {
+    fn project(events: &[Self::Event]) -> Self {
         let mut value = Self::default();
         value.extend(events);
         value
     }
 }
 
-pub trait Snapshoter: Projector {
+/// Implement on Snapshots
+pub trait Rewind: Project {
     type Error: std::error::Error;
 
     fn rewind(&self) -> Result<Vec<Self::Event>, Self::Error>;
 }
 
+/// Implement on Commands
 #[async_trait]
-pub trait Commander<R> {
+pub trait Execute<R> {
     type Error: std::error::Error;
 
     async fn execute(&self, runtime: &R) -> Result<(), Self::Error>;
 }
 
+/// Implement on Queries
 #[async_trait]
-pub trait Querier<R> {
+pub trait Fetch<R> {
     type Output;
     type Error: std::error::Error;
 

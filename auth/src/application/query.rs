@@ -7,7 +7,7 @@ pub struct GetJwtByUserId {
 }
 
 #[async_trait]
-impl<R> Querier<R> for GetJwtByUserId
+impl<R> Fetch<R> for GetJwtByUserId
 where
     R: JwtPort + UserRepository,
     R: Send + Sync,
