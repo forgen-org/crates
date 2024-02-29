@@ -37,7 +37,8 @@ pub trait Rewind: Project {
 }
 
 /// Implement on Commands
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Execute<R> {
     type Error: std::error::Error;
 
@@ -45,18 +46,11 @@ pub trait Execute<R> {
 }
 
 /// Implement on Queries
-#[async_trait]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Fetch<R> {
     type Output;
     type Error: std::error::Error;
 
     async fn fetch(&self, runtime: &R) -> Result<Self::Output, Self::Error>;
-}
-
-/// Implement on Presenters
-#[async_trait(?Send)]
-pub trait Reduce<R> {
-    type Action;
-
-    async fn reduce(&self, runtime: &R, action: Self::Action) -> Self;
 }

@@ -44,7 +44,7 @@ impl MongoDbService {
     }
 }
 
-#[async_trait]
+#[service]
 impl EventStore for MongoDbService {
     async fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError> {
         let event_option = self
@@ -90,7 +90,7 @@ impl EventStore for MongoDbService {
     }
 }
 
-#[async_trait]
+#[service]
 impl UserRepository for MongoDbService {
     async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError> {
         self.users()

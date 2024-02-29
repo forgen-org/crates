@@ -19,7 +19,7 @@ impl Default for Tokio {
     }
 }
 
-#[async_trait]
+#[service]
 impl SignalPub for Tokio {
     async fn publish(&self, signal: Signal) -> () {
         let sender = self.sender.lock().unwrap();

@@ -13,7 +13,7 @@ pub struct Register {
     pub transaction_id: Option<TransactionId>,
 }
 
-#[async_trait]
+#[service]
 impl<R> Execute<R> for Register
 where
     R: EventStore + SignalPub + UserRepository,
@@ -51,20 +51,6 @@ where
     }
 }
 
-// #[async_trait]
-// impl<R> Execute<R> for Register
-// where
-//     R: WebView,
-//     R: Send + Sync,
-// {
-//     type Error = CommandError;
-
-//     async fn execute(&self, runtime: &R) -> Result<(), Self::Error> {
-//         WebView::push(runtime, "");
-//         todo!();
-//     }
-// }
-
 #[derive(Serialize, Deserialize)]
 pub struct Login {
     pub email: Email,
@@ -72,7 +58,7 @@ pub struct Login {
     pub transaction_id: Option<TransactionId>,
 }
 
-#[async_trait]
+#[service]
 impl<R> Execute<R> for Login
 where
     R: EventStore + SignalPub,
@@ -114,18 +100,18 @@ pub struct ConnectLinkedIn {
     pub transaction_id: Option<TransactionId>,
 }
 
-#[async_trait]
+#[service]
 impl<R> Execute<R> for ConnectLinkedIn
 where
-    R: EventStore + LinkedInPort + SignalPub,
+    R: EventStore + LinkedInApi + SignalPub,
     R: Send + Sync,
 {
     type Error = CommandError;
 
     async fn execute(&self, runtime: &R) -> Result<(), Self::Error> {
-        let tokens = LinkedInPort::sign_in(runtime, &self.code).await?;
+        let tokens = LinkedInApi::sign_in(runtime, &self.code).await?;
 
-        let email = LinkedInPort::get_email(runtime, &tokens).await?;
+        let email = LinkedInApi::get_email(runtime, &tokens).await?;
 
         let user_id = EventStore::identify_by_email(runtime, &email).await?;
 
@@ -163,7 +149,7 @@ pub struct ProjectUser {
     pub user_id: UserId,
 }
 
-#[async_trait]
+#[service]
 impl<R> Execute<R> for ProjectUser
 where
     R: SignalPub + UserRepository,

@@ -1,39 +1,34 @@
 use super::projection::User;
+use super::view::{Jwt, LinkedInOAuthUrl};
 use crate::domain::{scalar::*, Event};
 use forgen::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[async_trait]
-#[delegate]
+#[port]
 pub trait EventStore {
     async fn identify_by_email(&self, email: &Email) -> Result<Option<UserId>, UnexpectedError>;
     async fn pull_by_user_id(&self, user_id: &UserId) -> Result<Vec<Event>, UnexpectedError>;
     async fn push(&self, events: &[Event]) -> Result<(), UnexpectedError>;
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Jwt(pub String);
-
-#[async_trait]
-#[delegate]
+#[port]
 pub trait JwtPort {
     async fn sign(&self, user: &User) -> Result<Jwt, UnexpectedError>;
     async fn verify(&self, token: &Jwt) -> Result<User, UnexpectedError>;
 }
 
-#[async_trait]
-#[delegate]
+#[port]
 pub trait JwtStore {
     async fn get(&self) -> Option<Jwt>;
     async fn set(&self, jwt: &Jwt);
 }
 
-#[async_trait]
-#[delegate]
-pub trait LinkedInPort {
-    async fn sign_in(&self, code: &str) -> Result<LinkedInTokens, UnexpectedError>;
+#[port]
+pub trait LinkedInApi {
     async fn get_email(&self, tokens: &LinkedInTokens) -> Result<Email, UnexpectedError>;
+    async fn get_oauth_url(&self) -> Result<LinkedInOAuthUrl, UnexpectedError>;
+    async fn sign_in(&self, code: &str) -> Result<LinkedInTokens, UnexpectedError>;
 }
 
 pub struct LinkedInTokens {
@@ -59,8 +54,7 @@ pub enum Signal {
     },
 }
 
-#[async_trait]
-#[delegate]
+#[port]
 pub trait SignalPub {
     async fn publish(&self, signal: Signal);
 }
@@ -80,19 +74,8 @@ impl ToString for TransactionId {
     }
 }
 
-#[async_trait]
-#[delegate]
+#[port]
 pub trait UserRepository {
     async fn find_by_user_id(&self, user_id: &UserId) -> Result<Option<User>, UnexpectedError>;
     async fn save(&self, projection: &User) -> Result<(), UnexpectedError>;
-}
-
-#[async_trait(?Send)]
-#[delegate]
-pub trait WebView {
-    fn get_query_param(&self, key: &str) -> Option<String>;
-    async fn open(&self, url: &str) -> Result<(), UnexpectedError>;
-    async fn post<T>(&self, url: &str, data: T) -> Result<Jwt, UnexpectedError>
-    where
-        T: Serialize;
 }

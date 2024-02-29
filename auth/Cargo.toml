@@ -7,8 +7,6 @@ edition = "2021"
 chrono = { version = "0.4.33", features = ["serde"] }
 forgen = { path = "../forgen" }
 futures = { version = "0.3.30", optional = true }
-gloo-net = { version = "0.5.0", optional = true }
-gloo-storage = { version = "0.3.0", optional = true }
 hmac = { version = "0.12.1", optional = true }
 jwt = { version = "0.16.0", optional = true }
 mongodb = { version = "2.8.0", features = ["bson-uuid-1"], optional = true }
@@ -21,7 +19,6 @@ sha2 = "0.10.8"
 tokio = { version = "1.0", features = ["full"], optional = true }
 urlencoding = { version = "2.1.3", optional = true }
 uuid = { version = "1.7.0", features = ["serde", "v4"] }
-web-sys = { version = "0.3.68", features = ["Document", "Location", "Request", "Url", "UrlSearchParams", "Window"], optional = true }
 
 [dev-dependencies]
 reqwest = { version = "0.11", features = ["json"] }
@@ -34,4 +31,3 @@ jwt = ["dep:hmac", "dep:jwt"]
 linkedin = ["dep:reqwest", "dep:serde_urlencoded"]
 mongodb = ["dep:futures", "dep:mongodb", "dep:serde_json"]
 tokio = ["dep:tokio"]
-web_sys = ["dep:gloo-net", "dep:gloo-storage", "dep:web-sys"]

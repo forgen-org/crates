@@ -1,8 +1,5 @@
 use crate::{
-    application::{
-        port::{Jwt, JwtPort},
-        projection::User,
-    },
+    application::{port::JwtPort, projection::User, view::Jwt},
     domain::scalar::{Email, UserId},
 };
 use forgen::*;
@@ -25,7 +22,7 @@ impl Default for JwtService {
     }
 }
 
-#[async_trait]
+#[service]
 impl JwtPort for JwtService {
     async fn sign(&self, user: &User) -> Result<Jwt, UnexpectedError> {
         let header = Header {

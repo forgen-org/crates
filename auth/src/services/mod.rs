@@ -9,6 +9,3 @@ pub mod mongodb;
 
 #[cfg(feature = "tokio")]
 pub mod tokio;
-
-#[cfg(feature = "web_sys")]
-pub mod web_sys;

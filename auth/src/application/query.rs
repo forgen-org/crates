@@ -1,4 +1,5 @@
 use super::port::*;
+use super::view::{Jwt, LinkedInOAuthUrl};
 use crate::domain::scalar::*;
 use forgen::*;
 
@@ -6,7 +7,7 @@ pub struct GetJwtByUserId {
     pub user_id: UserId,
 }
 
-#[async_trait]
+#[service]
 impl<R> Fetch<R> for GetJwtByUserId
 where
     R: JwtPort + UserRepository,
@@ -15,7 +16,7 @@ where
     type Output = Jwt;
     type Error = GetJwtByEmailError;
 
-    async fn fetch(&self, runtime: &R) -> Result<Jwt, GetJwtByEmailError> {
+    async fn fetch(&self, runtime: &R) -> Result<Self::Output, Self::Error> {
         let user = UserRepository::find_by_user_id(runtime, &self.user_id)
             .await?
             .ok_or(GetJwtByEmailError::UserNotFound)?;
@@ -31,4 +32,20 @@ pub enum GetJwtByEmailError {
 
     #[error(transparent)]
     UnexpectedError(#[from] UnexpectedError),
+}
+
+pub struct GetLinkedInOAuthUrl;
+
+#[service]
+impl<R> Fetch<R> for GetLinkedInOAuthUrl
+where
+    R: LinkedInApi,
+    R: Send + Sync,
+{
+    type Output = LinkedInOAuthUrl;
+    type Error = UnexpectedError;
+
+    async fn fetch(&self, runtime: &R) -> Result<Self::Output, Self::Error> {
+        LinkedInApi::get_oauth_url(runtime).await
+    }
 }
