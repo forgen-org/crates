@@ -3,7 +3,6 @@ use crate::domain::{
     event::Event,
     scalar::{Email, UserId},
 };
-use base64::prelude::*;
 use forgen::*;
 use futures::TryStreamExt;
 use mongodb::bson::spec::BinarySubtype;
